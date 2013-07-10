@@ -27,7 +27,8 @@ class BaseFiler(object):
         return str(datetime.datetime.utcfromtimestamp(time))
 
     def stat(self, path):
-        st = os.stat(self._abspath(path))
+        # TODO 死んでいるシンボリックリンクでFileNotFoundError
+        st = os.lstat(self._abspath(path))
         dic = {}
         dic['abspath'] = self._abspath(path)
         dic['filename'] = os.path.basename(path)
@@ -45,7 +46,16 @@ class BaseFiler(object):
         return dic
 
     def ls(self):
-        return [self.stat(f) for f in os.listdir(self.cwd)]
+        return (self.stat(f) for f in os.listdir(self.cwd))
+
+    def chdir_or_execute(self, path):
+        abspath = self._abspath(path)
+        if os.path.isdir(abspath):
+            self._cwd = abspath
+            return self._cwd
+        else:
+            # TODO 処理を作ること
+            pass
 
     def chdir(self, path):
         abspath = self._abspath(path)

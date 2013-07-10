@@ -3,60 +3,100 @@
 
 import sys
 import PyQt4.QtCore as QtCore
+from  PyQt4.QtCore import Qt
 import PyQt4.QtGui as QtGui
 import filerview
+from filerview import KeyEventHandler
+from filerview  import TwoScreenFilerViewModel
 
 horizontal_header = ['filename', 'filemode', 'st_ctime', 'st_atime', 'st_size', ]
 
 class FilerWidget(QtGui.QWidget):
-    def __init__(self, filer, parent=None):
+    def __init__(self, viewmodel, parent=None):
         QtGui.QWidget.__init__(self, parent=parent)
-        self.filer = filer
+        viewmodel.register_observer(self)
+        self.setup_ui(viewmodel)
+
+    def setup_ui(self, viewmodel):
+        panel_layout = QtGui.QHBoxLayout()
+        self.setLayout(panel_layout)
+        panel_layout.setContentsMargins(0, 0, 0, 0)
+
+        tablewidget = QtGui.QTableWidget()
+        self.tablewidget = tablewidget
+        panel_layout.addWidget(tablewidget)
+
+        tablewidget.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        tablewidget.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        tablewidget.setShowGrid(False)
+        tablewidget.setGridStyle(QtCore.Qt.NoPen)
+
+        self.update(viewmodel)
+
+    def update(self, viewmodel):
+        self.tablewidget.setColumnCount(len(horizontal_header))
+        self.tablewidget.setRowCount(len(viewmodel.files))
+
+        self.tablewidget.setHorizontalHeaderLabels(horizontal_header)
+        self.tablewidget.verticalHeader().setVisible(False)
+
+        for i, f in enumerate(viewmodel.files):
+            for j, col in enumerate(horizontal_header):
+                item = None
+                if col == 'filename':
+                    icon = QtGui.QFileIconProvider().icon(QtCore.QFileInfo(f.state['abspath']))
+                    item = QtGui.QTableWidgetItem(icon, f.state[col])
+                else:
+                    item = QtGui.QTableWidgetItem(f.state[col])
+                # 選択時
+                if f.isselect:
+                    item.setBackgroundColor(QtGui.QColor(255, 255, 0))
+                self.tablewidget.setItem(i, j, item)
+        self.tablewidget.selectRow(viewmodel.cursor)
+
+
+class KeyPressEater(QtCore.QObject):
+    def __init__(self, handler):
+        QtCore.QObject.__init__(self)
+        self.handler = handler
+
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.KeyPress:
+            self.handler.on_key_press(event)
+            return True
+        else:
+            # standard event processing
+            return QtCore.QObject.eventFilter(self, obj, event)
+
+class TwoScreenFilerWidget(QtGui.QWidget):
+    def __init__(self, viewmodel, parent=None):
+        QtGui.QWidget.__init__(self, parent=parent)
+        self.viewmodel = viewmodel
         self.setup_ui()
+
+    def update(self, obj):
+        pass
 
     def setup_ui(self):
         panel_layout = QtGui.QHBoxLayout()
         self.setLayout(panel_layout)
         panel_layout.setContentsMargins(0, 0, 0, 0)
 
-        tablewidget = QtGui.QTableWidget()
-        panel_layout.addWidget(tablewidget)
-
-        tablewidget.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
-        tablewidget.setShowGrid(False)
-        tablewidget.setGridStyle(QtCore.Qt.NoPen)
-        tablewidget.setColumnCount(len(horizontal_header))
-        tablewidget.setRowCount(len(self.filer.files))
-
-        tablewidget.setHorizontalHeaderLabels(horizontal_header)
-        tablewidget.verticalHeader().setVisible(False)
-
-        for i, f in enumerate(self.filer.files):
-            for j, col in enumerate(horizontal_header):
-                if col == 'filename':
-                    icon = QtGui.QFileIconProvider().icon(QtCore.QFileInfo(f.state['abspath']))
-                    tablewidget.setItem(i, j, QtGui.QTableWidgetItem(icon, f.state[col]))
-                else:
-                    tablewidget.setItem(i, j, QtGui.QTableWidgetItem(f.state[col]))
+        self.leftWidget = FilerWidget(self.viewmodel.left)
+        self.rightWidget = FilerWidget(self.viewmodel.right)
+        panel_layout.addWidget(self.leftWidget)
+        panel_layout.addWidget(self.rightWidget)
 
 def main():
     app = QtGui.QApplication(sys.argv)
-
-    filer = filerview.FilerView()
-
-    panel = QtGui.QWidget()
-    leftfiler = FilerWidget(filer, panel)
-    rightfiler = FilerWidget(filer, panel)
-
-    panel_layout = QtGui.QHBoxLayout()
-    panel_layout.addWidget(leftfiler)
-    panel_layout.addWidget(rightfiler)
-    panel_layout.setContentsMargins(0, 0, 0, 0)
-    panel.setLayout(panel_layout)
-
+    vm = TwoScreenFilerViewModel()
+    handler = KeyEventHandler(vm)
+    kpe = KeyPressEater(handler)
+    app.installEventFilter(kpe)
+    tt = TwoScreenFilerWidget(vm)
     main_window = QtGui.QMainWindow()
     main_window.setWindowTitle("pyfiler")
-    main_window.setCentralWidget(panel)
+    main_window.setCentralWidget(tt)
 
     main_window.show()
     app.exec_()

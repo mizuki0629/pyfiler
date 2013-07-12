@@ -132,11 +132,14 @@ class FilerViewModel(Subject):
         return self.cwd()
 
 class TwoScreenFilerViewModel(Subject):
+    FocusLeft = 0
+    FocusRight = 1
     def __init__(self, view_left=FilerViewModel(), view_right=FilerViewModel()):
         Subject.__init__(self)
         self.views = (view_left, view_right)
         self.displayname = os.path.basename(self.left.cwd()) + ' : ' + os.path.basename(self.right.cwd())
         self.current = self.left
+        self.focus = self.FocusLeft
 
     @Notify
     def change_focus_left(self):
@@ -150,8 +153,10 @@ class TwoScreenFilerViewModel(Subject):
     def change_focus(self):
         if self.current == self.left:
             self.current = self.right
+            self.focus = self.FocusRight
         else:
             self.current = self.left
+            self.focus = self.FocusLeft
 
     def get_view_left(self):
         return self.views[0]

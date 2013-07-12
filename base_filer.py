@@ -27,22 +27,25 @@ class BaseFiler(object):
         return str(datetime.datetime.utcfromtimestamp(time))
 
     def stat(self, path):
-        # TODO 死んでいるシンボリックリンクでFileNotFoundError
-        st = os.lstat(self._abspath(path))
         dic = {}
         dic['abspath'] = self._abspath(path)
         dic['filename'] = os.path.basename(path)
-        dic['filemode'] = stat.filemode(st.st_mode)
-        dic['st_mode'] = st.st_mode
-        dic['st_ino'] = st.st_ino
-        dic['st_dev'] = st.st_dev
-        dic['st_nlink'] = st.st_nlink
-        dic['st_uid'] = st.st_uid
-        dic['st_gid'] = st.st_gid
-        dic['st_size'] = str(st.st_size)
-        dic['st_atime'] = self.strftime(st.st_atime)
-        dic['st_mtime'] = self.strftime(st.st_mtime)
-        dic['st_ctime'] = self.strftime(st.st_ctime)
+        try:
+
+            st = os.lstat(self._abspath(path))
+            dic['filemode'] = stat.filemode(st.st_mode)
+            dic['st_mode'] = st.st_mode
+            dic['st_ino'] = st.st_ino
+            dic['st_dev'] = st.st_dev
+            dic['st_nlink'] = st.st_nlink
+            dic['st_uid'] = st.st_uid
+            dic['st_gid'] = st.st_gid
+            dic['st_size'] = str(st.st_size)
+            dic['st_atime'] = self.strftime(st.st_atime)
+            dic['st_mtime'] = self.strftime(st.st_mtime)
+            dic['st_ctime'] = self.strftime(st.st_ctime)
+        except PermissionError:
+            pass
         return dic
 
     def ls(self):

@@ -18,9 +18,16 @@ class FilerWidget(QtGui.QWidget):
         self.setup_ui(viewmodel)
 
     def setup_ui(self, viewmodel):
-        panel_layout = QtGui.QHBoxLayout()
+        panel_layout = QtGui.QVBoxLayout()
         self.setLayout(panel_layout)
         panel_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.cwdline = QtGui.QLineEdit()
+        self.cwdline.setEnabled(False)
+        palette = QtGui.QPalette()
+        palette.setColor(QtGui.QPalette.Base, Qt.white)
+        self.cwdline.setPalette(palette)
+        panel_layout.addWidget(self.cwdline)
 
         tablewidget = QtGui.QTableWidget()
         self.tablewidget = tablewidget
@@ -34,6 +41,8 @@ class FilerWidget(QtGui.QWidget):
         self.update(viewmodel)
 
     def update(self, viewmodel):
+        self.cwdline.setText(viewmodel.cwd())
+
         self.tablewidget.setColumnCount(len(horizontal_header))
         self.tablewidget.setRowCount(len(viewmodel.files))
 
@@ -43,11 +52,12 @@ class FilerWidget(QtGui.QWidget):
         for i, f in enumerate(viewmodel.files):
             for j, col in enumerate(horizontal_header):
                 item = None
-                if col == 'filename':
-                    icon = QtGui.QFileIconProvider().icon(QtCore.QFileInfo(f.state['abspath']))
-                    item = QtGui.QTableWidgetItem(icon, f.state[col])
-                else:
-                    item = QtGui.QTableWidgetItem(f.state[col])
+                if col in f.state:
+                    if col == 'filename':
+                        icon = QtGui.QFileIconProvider().icon(QtCore.QFileInfo(f.state['abspath']))
+                        item = QtGui.QTableWidgetItem(icon, f.state[col])
+                    else:
+                        item = QtGui.QTableWidgetItem(f.state[col])
                 # 選択時
                 if f.isselect:
                     item.setBackgroundColor(QtGui.QColor(255, 255, 0))
@@ -71,21 +81,24 @@ class KeyPressEater(QtCore.QObject):
 class TwoScreenFilerWidget(QtGui.QWidget):
     def __init__(self, viewmodel, parent=None):
         QtGui.QWidget.__init__(self, parent=parent)
-        self.viewmodel = viewmodel
-        self.setup_ui()
+        viewmodel.register_observer(self)
+        self.setup_ui(viewmodel)
 
-    def update(self, obj):
-        pass
+    def update(self, viewmodel):
+        self.views[viewmodel.focus].tablewidget.setFocus(Qt.OtherFocusReason)
 
-    def setup_ui(self):
+    def setup_ui(self, viewmodel):
         panel_layout = QtGui.QHBoxLayout()
         self.setLayout(panel_layout)
         panel_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.leftWidget = FilerWidget(self.viewmodel.left)
-        self.rightWidget = FilerWidget(self.viewmodel.right)
+        self.leftWidget = FilerWidget(viewmodel.left)
+        self.rightWidget = FilerWidget(viewmodel.right)
+        self.views = (self.leftWidget, self.rightWidget)
         panel_layout.addWidget(self.leftWidget)
         panel_layout.addWidget(self.rightWidget)
+
+        self.update(viewmodel)
 
 def main():
     app = QtGui.QApplication(sys.argv)

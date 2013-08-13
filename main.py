@@ -3,13 +3,14 @@
 
 import sys
 import PyQt4.QtCore as QtCore
-from  PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt
 import PyQt4.QtGui as QtGui
-import filerview
 from filerview import KeyEventHandler
-from filerview  import TwoScreenFilerViewModel
+from filerview import TwoScreenFilerViewModel
 
-horizontal_header = ['filename', 'filemode', 'st_ctime', 'st_atime', 'st_size', ]
+horizontal_header = ['filename', 'filemode', 'st_ctime',
+                     'st_atime', 'st_size', ]
+
 
 class FilerWidget(QtGui.QWidget):
     def __init__(self, viewmodel, parent=None):
@@ -78,6 +79,7 @@ class KeyPressEater(QtCore.QObject):
             # standard event processing
             return QtCore.QObject.eventFilter(self, obj, event)
 
+
 class TwoScreenFilerWidget(QtGui.QWidget):
     def __init__(self, viewmodel, parent=None):
         QtGui.QWidget.__init__(self, parent=parent)
@@ -99,6 +101,7 @@ class TwoScreenFilerWidget(QtGui.QWidget):
         panel_layout.addWidget(self.rightWidget)
 
         self.update(viewmodel)
+
 
 def main():
     app = QtGui.QApplication(sys.argv)

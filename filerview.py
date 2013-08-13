@@ -3,7 +3,8 @@
 
 from base_filer import BaseFiler
 import os.path
-from  PyQt4.QtCore import Qt # TODO qtに依存しない形にすること
+from PyQt4.QtCore import Qt  # TODO qtに依存しない形にすること
+
 
 class Subject(object):
     def __init__(self):
@@ -19,12 +20,14 @@ class Subject(object):
         for o in self.observers:
             o.update(self)
 
+
 def Notify(func):
     def notify_observers_after_original_function(self, *args, **kwargs):
         result = func(self, *args, **kwargs)
         self.notify_observers()
         return result
     return notify_observers_after_original_function
+
 
 class FileViewModel(object):
     def __init__(self, state):
@@ -33,6 +36,7 @@ class FileViewModel(object):
 
     def __repr__(self):
         return self.filename + ' : ' + str(self.isselect)
+
 
 class FilerViewModel(Subject):
     def __init__(self, filer=BaseFiler):
@@ -50,8 +54,8 @@ class FilerViewModel(Subject):
         if self.cursor < len(self.files) - 1:
             self.cursor = self.cursor + 1
 
-    cursor_file = property(lambda self : self.files[self.cursor])
-    cursor_file_abspath = property(lambda self : self.cursor_file.state['abspath'])
+    cursor_file = property(lambda self: self.files[self.cursor])
+    cursor_file_abspath = property(lambda self: self.cursor_file.state['abspath'])
 
     def Reload(func):
         def reload_after_original_function(self, *args, **kwargs):
@@ -131,10 +135,13 @@ class FilerViewModel(Subject):
     def __repr__(self):
         return self.cwd()
 
+
 class TwoScreenFilerViewModel(Subject):
     FocusLeft = 0
     FocusRight = 1
-    def __init__(self, view_left=FilerViewModel(), view_right=FilerViewModel()):
+
+    def __init__(self, view_left=FilerViewModel(),
+                 view_right=FilerViewModel()):
         Subject.__init__(self)
         self.views = (view_left, view_right)
         self.displayname = os.path.basename(self.left.cwd()) + ' : ' + os.path.basename(self.right.cwd())
@@ -169,9 +176,11 @@ class TwoScreenFilerViewModel(Subject):
     def __repr__(self):
         return self.left.cwd() + ' | ' + self.right.cwd()
 
+
 class TabViewModel(object):
     def __init__(self):
         self.tabs = []
+
 
 class KeyEventHandler(object):
     def __init__(self, viewmodel):

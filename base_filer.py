@@ -7,6 +7,7 @@ import shutil
 import stat
 import datetime
 
+
 class BaseFiler(object):
     def __init__(self, path=os.getcwd()):
         self.cwd_history = list()
@@ -104,6 +105,7 @@ class BaseFiler(object):
             shutil.rmtree(abs_path)
         else:
             raise IOError()
+
 
 def main():
     filer = BaseFiler()

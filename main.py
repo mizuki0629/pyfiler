@@ -6,7 +6,7 @@ import PyQt4.QtCore as QtCore
 from PyQt4.QtCore import Qt
 import PyQt4.QtGui as QtGui
 from filerview import KeyEventHandler
-from filerview import TwoScreenFilerViewModel
+from filerview import TabViewModel
 
 horizontal_header = ['filename', 'filemode', 'st_ctime',
                      'st_atime', 'st_size', ]
@@ -102,17 +102,32 @@ class TwoScreenFilerWidget(QtGui.QWidget):
 
         self.update(viewmodel)
 
+class TabWidget(QtGui.QTabWidget):
+    def __init__(self, viewmodel, parent=None):
+        QtGui.QTabWidget.__init__(self, parent=parent)
+        viewmodel.register_observer(self)
+        self.viewmodel = viewmodel
+        self.setup_ui(viewmodel)
+
+    def update(self, viewmodel):
+        self.addTabWithPath("./")
+
+    def setup_ui(self, viewmodel):
+        self.addTabWithPath("./")
+
+    def addTabWithPath(self, path):
+        self.addTab(TwoScreenFilerWidget(self.viewmodel.currentTab()), "test")
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    vm = TwoScreenFilerViewModel()
+    vm = TabViewModel()
     handler = KeyEventHandler(vm)
     kpe = KeyPressEater(handler)
     app.installEventFilter(kpe)
-    tt = TwoScreenFilerWidget(vm)
+    tab = TabWidget(vm)
     main_window = QtGui.QMainWindow()
     main_window.setWindowTitle("pyfiler")
-    main_window.setCentralWidget(tt)
+    main_window.setCentralWidget(tab)
 
     main_window.show()
     app.exec_()

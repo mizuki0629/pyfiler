@@ -147,6 +147,7 @@ class TwoScreenFilerViewModel(Subject):
         self.displayname = os.path.basename(self.left.cwd()) + ' : ' + os.path.basename(self.right.cwd())
         self.current = self.left
         self.focus = self.FocusLeft
+        self.title = "test"
 
     @Notify
     def change_focus_left(self):
@@ -177,9 +178,19 @@ class TwoScreenFilerViewModel(Subject):
         return self.left.cwd() + ' | ' + self.right.cwd()
 
 
-class TabViewModel(object):
+class TabViewModel(Subject):
     def __init__(self):
+        Subject.__init__(self)
         self.tabs = []
+        self.cursor = 0
+        self.addTab(TwoScreenFilerViewModel())
+
+    @Notify
+    def addTab(self, filervm):
+        self.tabs.append(filervm)
+
+    def currentTab(self):
+        return self.tabs[self.cursor]
 
 
 class KeyEventHandler(object):
@@ -190,32 +201,36 @@ class KeyEventHandler(object):
     def on_key_press(self, event):
         key = event.key()
         shift = event.modifiers() & Qt.ShiftModifier
+        currentTab = self.viewmodel.currentTab()
+        current = currentTab.current
         if shift:
             if key == Qt.Key_Space:
-                self.viewmodel.current.toggle_isselet_up()
+                current.toggle_isselet_up()
             elif key == Qt.Key_G:
-                self.viewmodel.current.cursor_last()
+                current.cursor_last()
             elif key == Qt.Key_H:
-                self.viewmodel.current.chdir_parent()
+                current.chdir_parent()
         else:
             if key == Qt.Key_A:
-                self.viewmodel.current.toggle_isselect_all()
+                current.toggle_isselect_all()
             elif key == Qt.Key_K:
-                self.viewmodel.current.cursor_up()
+                current.cursor_up()
             elif key == Qt.Key_J:
-                self.viewmodel.current.cursor_down()
+                current.cursor_down()
             elif key == Qt.Key_L:
-                self.viewmodel.current.chdir_or_execute()
+                current.chdir_or_execute()
             elif key == Qt.Key_Tab:
-                self.viewmodel.change_focus()
+                currentTab.change_focus()
             elif key == Qt.Key_H:
-                self.viewmodel.current.chdir_parent()
+                current.chdir_parent()
             elif key == Qt.Key_R:
-                self.viewmodel.current.reload()
+                current.reload()
             elif key == Qt.Key_G:
-                self.viewmodel.current.cursor_first()
+                current.cursor_first()
+            elif key == Qt.Key_T:
+                self.viewmodel.addTab(TwoScreenFilerViewModel())
             if key == Qt.Key_Space:
-                self.viewmodel.current.toggle_isselet_down()
+                current.toggle_isselet_down()
 
 
 def main():

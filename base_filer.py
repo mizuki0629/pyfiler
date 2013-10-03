@@ -24,8 +24,10 @@ class BaseFiler(object):
         else:
             return os.path.normpath(os.path.join(self.cwd, path))
 
+    # TODO utcfromtimestampで渡して、UIで変換したほうが良い？
     def strftime(self, time):
-        return str(datetime.datetime.utcfromtimestamp(time))
+        #return str(datetime.datetime.utcfromtimestamp(time))
+        return datetime.datetime.strftime(datetime.datetime.utcfromtimestamp(time), '%Y/%m/%d %H:%M:%S')
 
     def stat(self, path):
         dic = {}

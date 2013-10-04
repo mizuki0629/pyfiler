@@ -37,7 +37,6 @@ def Notify(kind):
     return notify_decorator
 
 
-
 class FileViewModel(object):
     def __init__(self, state):
         self.state = state
@@ -232,12 +231,23 @@ class TabViewModel(Subject):
         else:
             self.currentIndex = len(self.tabs) - 1
 
+
+class CommandParser(object):
+    pass
+
+
 class KeyEventHandler(object):
     def __init__(self, viewmodel):
         self.viewmodel = viewmodel
+        self.commandLineMode = False
+
+    def do_command(self, command):
+        logging.debug(command)
 
     # TODO qtに依存しない形にすること
     def on_key_press(self, event):
+        if self.commandLineMode:
+            return False
         key = event.key()
         shift = event.modifiers() & Qt.ShiftModifier
         currentTab = self.viewmodel.currentTab()
@@ -276,6 +286,9 @@ class KeyEventHandler(object):
                 self.viewmodel.addTab(TwoScreenFilerViewModel())
             if key == Qt.Key_Space:
                 current.toggle_isselet_down()
+            if key == Qt.Key_Semicolon:
+                self.commandLineMode = True
+        return True
 
 
 def main():

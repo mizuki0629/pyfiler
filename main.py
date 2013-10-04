@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # coding: utf-8
 
-import threading
 import logging
 import sys
 import PyQt4.QtCore as QtCore
@@ -125,17 +124,30 @@ class FilerWidget(QtGui.QWidget):
                         item.setBackgroundColor(QtGui.QColor(255, 255, 0))
                     self.tablewidget.setItem(i, j, item)
             self.tablewidget.selectRow(viewmodel.cursor)
+            self.tablewidget.resizeRowsToContents()
 
 
 class KeyPressEater(QtCore.QObject):
+
+    commandLineMode = QtCore.pyqtSignal(bool)
+
     def __init__(self, handler):
         QtCore.QObject.__init__(self)
         self.handler = handler
 
+    @QtCore.pyqtSlot(str)
+    def commandEditingFinished(self, command):
+        self.handler.do_command(command)
+
+    @QtCore.pyqtSlot(bool)
+    def commandLineFocussed(self, focussed):
+        self.handler.commandLineMode = focussed
+        self.commandLineMode.emit(focussed)
+
+    # TODO セミコロンを押したときにどうやってコマンドラインにフォーカス移す？
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.KeyPress:
-            self.handler.on_key_press(event)
-            return True
+            return self.handler.on_key_press(event)
         else:
             # standard event processing
             return QtCore.QObject.eventFilter(self, obj, event)
@@ -163,11 +175,11 @@ class TwoScreenFilerWidget(QtGui.QWidget):
 
         self.update(viewmodel, 'update')
 
+
 class LogWidet(QtGui.QPlainTextEdit):
     def __init__(self, parent=None):
         QtGui.QPlainTextEdit.__init__(self, parent=parent)
         self.setReadOnly(True)
-        self.i = 0
 
         #rootロガーを取得
         logger = logging.getLogger()
@@ -194,13 +206,42 @@ class LogWidet(QtGui.QPlainTextEdit):
     def flush(self):
         pass
 
+
 class CommandLineWidget(QtGui.QLineEdit):
-    pass
+    focussed = QtCore.pyqtSignal(bool)
+    commandEditingFinished = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        QtGui.QLineEdit.__init__(self, parent=parent)
+        self.returnPressed.connect(self.command_editing_finished)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.clearFocus()
+        else:
+            QtGui.QLineEdit.keyPressEvent(self, event)
+
+    @QtCore.pyqtSlot()
+    def command_editing_finished(self):
+        self.commandEditingFinished.emit(self.text())
+        self.clearFocus()
+
+    def focusInEvent(self, e):
+        self.focussed.emit(True)
+
+    def focusOutEvent(self, e):
+        self.focussed.emit(False)
+        self.clear()
+
 
 class CentralWidget(QtGui.QWidget):
     def __init__(self, viewmodel, parent=None):
         QtGui.QWidget.__init__(self, parent=parent)
         self.setup_ui(viewmodel)
+
+    @QtCore.pyqtSlot(bool)
+    def commandlog(self, focussed):
+        logging.debug("focus " + str(focussed))
 
     def setup_ui(self, viewmodel):
         panel = QtGui.QVBoxLayout()
@@ -214,8 +255,10 @@ class CentralWidget(QtGui.QWidget):
         log.setMaximumHeight(100)
         panel.addWidget(log)
 
-        commandLine = CommandLineWidget()
-        panel.addWidget(commandLine)
+        self.commandLine = CommandLineWidget()
+        panel.addWidget(self.commandLine)
+        self.commandLine.focussed.connect(self.commandlog)
+
 
 class TabWidget(QtGui.QTabWidget):
     class ChdirObserver():
@@ -266,13 +309,15 @@ def main():
     handler = KeyEventHandler(vm)
     kpe = KeyPressEater(handler)
     app.installEventFilter(kpe)
-    tab = TabWidget(vm)
     main_window = QtGui.QMainWindow()
     main_window.setWindowTitle("pyfiler")
-    #main_window.setCentralWidget(tab)
 
     cw = CentralWidget(vm)
     main_window.setCentralWidget(cw)
+
+    cw.commandLine.focussed.connect(kpe.commandLineFocussed)
+    cw.commandLine.commandEditingFinished.connect(kpe.commandEditingFinished)
+    #kpe.comanndLineMode.connect()
 
     main_window.show()
     app.exec_()

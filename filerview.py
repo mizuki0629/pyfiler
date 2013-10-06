@@ -5,6 +5,10 @@ import logging
 from base_filer import BaseFiler
 import os.path
 from PyQt4.QtCore import Qt  # TODO qtに依存しない形にすること
+import lispy
+import command
+import imp
+import keymap
 
 
 class Subject(object):
@@ -203,6 +207,9 @@ class TabViewModel(Subject):
         self.currentIndex = 0
         self.addTab(TwoScreenFilerViewModel())
 
+    def tabnew(self):
+        self.addTab(TwoScreenFilerViewModel())
+
     @Notify('add')
     def addTab(self, filervm):
         self.tabs.append(filervm)
@@ -212,46 +219,62 @@ class TabViewModel(Subject):
         return self.tabs[self.currentIndex]
 
     def removeTab(self, index):
-        self.tabs.pop(index)
-        if self.currentIndex >= len(self.tabs):
-            self.currentIndex = len(self.tabs) - 1
-        self.notify(Subject.Event('remove', index=index))
+        if len(self.tabs) > 1:
+            self.tabs.pop(index)
+            if self.currentIndex >= len(self.tabs):
+                self.currentIndex = len(self.tabs) - 1
+            self.notify(Subject.Event('remove', index=index))
 
-    @Notify('next')
+    @Notify('tabchange')
+    def changeTab(self, index):
+        if 0 <= index and index < len(self.tabs):
+            self.currentIndex = index
+
+    @Notify('tabchange')
     def nextTab(self):
         if self.currentIndex < len(self.tabs) - 1:
             self.currentIndex += 1
         else:
             self.currentIndex = 0
 
-    @Notify('prev')
+    @Notify('tabchange')
     def prevTab(self):
         if self.currentIndex > 0:
             self.currentIndex -= 1
         else:
             self.currentIndex = len(self.tabs) - 1
 
-
-class CommandParser(object):
-    pass
-
+    def reload_commands(self):
+        imp.reload(command)
 
 class KeyEventHandler(object):
     def __init__(self, viewmodel):
         self.viewmodel = viewmodel
-        self.commandLineMode = False
+
+    def do_complite(self, command):
+        word = command
+        return [ s for key in lispy.global_env.keys if key.startswith(word)]
 
     def do_command(self, command):
         logging.debug(command)
+        try:
+            val = lispy.eval(lispy.parse(command))
+            if val is not None:
+                logging.info(lispy.to_string(val))
+        except Exception as e:
+            logging.exception(e)
+        return True
 
     # TODO qtに依存しない形にすること
     def on_key_press(self, event):
-        if self.commandLineMode:
-            return False
         key = event.key()
         shift = event.modifiers() & Qt.ShiftModifier
         currentTab = self.viewmodel.currentTab()
         current = currentTab.current
+        if key in keymap.qt_keymap:
+            if keymap.qt_keymap[key] in keymap.normal_map:
+                lispy.eval([keymap.normal_map[keymap.qt_keymap[key]]])
+                return True
         if shift:
             if key == Qt.Key_Space:
                 current.toggle_isselet_up()
@@ -259,6 +282,8 @@ class KeyEventHandler(object):
                 current.cursor_last()
             elif key == Qt.Key_H:
                 current.chdir_parent()
+            elif key == Qt.Key_R:
+                self.do_command("(reload-commands)")
         else:
             if key == Qt.Key_A:
                 current.toggle_isselect_all()
@@ -285,9 +310,7 @@ class KeyEventHandler(object):
             elif key == Qt.Key_T:
                 self.viewmodel.addTab(TwoScreenFilerViewModel())
             if key == Qt.Key_Space:
-                current.toggle_isselet_down()
-            if key == Qt.Key_Semicolon:
-                self.commandLineMode = True
+                self.do_command("(select-down)")
         return True
 
 

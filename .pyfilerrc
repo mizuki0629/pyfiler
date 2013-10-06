@@ -1,0 +1,7 @@
+; vim: filetype=scheme
+(set-window-size 1100 600)
+(set-window-title "pyfiler")
+(set-default-font "Monaco")
+
+(define-key normal-map "t" 'tabnew)
+;(define-key normal-map "j" 'cursor-down)

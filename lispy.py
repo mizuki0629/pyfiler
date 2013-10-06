@@ -4,8 +4,9 @@
 
 ################ Symbol, Procedure, classes
 
-from __future__ import division
-import re, sys, StringIO
+
+import re, sys, io
+import collections
 
 class Symbol(str): pass
 
@@ -14,11 +15,11 @@ def Sym(s, symbol_table={}):
     if s not in symbol_table: symbol_table[s] = Symbol(s)
     return symbol_table[s]
 
-_quote, _if, _set, _define, _lambda, _begin, _definemacro, = map(Sym, 
-"quote   if   set!  define   lambda   begin   define-macro".split())
+_quote, _if, _set, _define, _lambda, _begin, _definemacro, = list(map(Sym, 
+"quote   if   set!  define   lambda   begin   define-macro".split()))
 
-_quasiquote, _unquote, _unquotesplicing = map(Sym,
-"quasiquote   unquote   unquote-splicing".split())
+_quasiquote, _unquote, _unquotesplicing = list(map(Sym,
+"quasiquote   unquote   unquote-splicing".split()))
 
 class Procedure(object):
     "A user-defined Scheme procedure."
@@ -32,7 +33,7 @@ class Procedure(object):
 def parse(inport):
     "Parse a program: read and expand/error-check it."
     # Backwards compatibility: given a str, convert it to an InPort
-    if isinstance(inport, str): inport = InPort(StringIO.StringIO(inport))
+    if isinstance(inport, str): inport = InPort(io.StringIO(inport))
     return expand(read(inport), toplevel=True)
 
 eof_object = Symbol('#<eof-object>') # Note: uninterned; can't be read
@@ -82,7 +83,8 @@ def atom(token):
     'Numbers become numbers; #t and #f are booleans; "..." string; otherwise Symbol.'
     if token == '#t': return True
     elif token == '#f': return False
-    elif token[0] == '"': return token[1:-1].decode('string_escape')
+    elif token == 'nil': return [_quote, []]
+    elif token[0] == '"': return token[1:-1]
     try: return int(token)
     except ValueError:
         try: return float(token)
@@ -96,7 +98,8 @@ def to_string(x):
     if x is True: return "#t"
     elif x is False: return "#f"
     elif isa(x, Symbol): return x
-    elif isa(x, str): return '"%s"' % x.encode('string_escape').replace('"',r'\"')
+    elif isa(x, str): return '"%s"' % x.replace('"',r'\"')
+    elif isa(x, Pair): return '('+' . '.join(map(to_string, x))+')'
     elif isa(x, list): return '('+' '.join(map(to_string, x))+')'
     elif isa(x, complex): return str(x).replace('j', 'i')
     else: return str(x)
@@ -114,9 +117,9 @@ def repl(prompt='lispy> ', inport=InPort(sys.stdin), out=sys.stdout):
             x = parse(inport)
             if x is eof_object: return
             val = eval(x)
-            if val is not None and out: print >> out, to_string(val)
+            if val is not None and out: print(to_string(val), file=out)
         except Exception as e:
-            print '%s: %s' % (type(e).__name__, e)
+            print('%s: %s' % (type(e).__name__, e))
 
 ################ Environment class
 
@@ -131,15 +134,26 @@ class Env(dict):
             if len(args) != len(parms):
                 raise TypeError('expected %s, given %s, ' 
                                 % (to_string(parms), to_string(args)))
-            self.update(zip(parms,args))
+            self.update(list(zip(parms,args)))
     def find(self, var):
         "Find the innermost Env where var appears."
         if var in self: return self
         elif self.outer is None: raise LookupError(var)
         else: return self.outer.find(var)
 
+class Pair(list): pass
 def is_pair(x): return x != [] and isa(x, list)
-def cons(x, y): return [x]+y
+def cons(x, y):
+    if type(y) is list:
+        return [x]+y
+    else:
+        return Pair((x, y))
+
+def cdr(x):
+    if type(x) is Pair:
+        return x[1]
+    else:
+        return x[1:]
 
 def callcc(proc):
     "Call proc with current continuation; escape only"
@@ -157,10 +171,10 @@ def add_globals(self):
     self.update(vars(math))
     self.update(vars(cmath))
     self.update({
-     '+':op.add, '-':op.sub, '*':op.mul, '/':op.div, 'not':op.not_, 
+     '+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 'not':op.not_, 
      '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
      'equal?':op.eq, 'eq?':op.is_, 'length':len, 'cons':cons,
-     'car':lambda x:x[0], 'cdr':lambda x:x[1:], 'append':op.add,  
+     'car':lambda x:x[0], 'cdr':cdr, 'append':op.add,  
      'list':lambda *x:list(x), 'list?': lambda x:isa(x,list),
      'null?':lambda x:x==[], 'symbol?':lambda x: isa(x, Symbol),
      'boolean?':lambda x: isa(x, bool), 'pair?':is_pair, 
@@ -229,7 +243,7 @@ def expand(x, toplevel=False):
     elif x[0] is _if:                    
         if len(x)==3: x = x + [None]     # (if t c) => (if t c None)
         require(x, len(x)==4)
-        return map(expand, x)
+        return list(map(expand, x))
     elif x[0] is _set:                   
         require(x, len(x)==3); 
         var = x[1]                       # (set! non-var exp) => Error
@@ -248,7 +262,7 @@ def expand(x, toplevel=False):
             if _def is _definemacro:     
                 require(x, toplevel, "define-macro only allowed at top level")
                 proc = eval(exp)       
-                require(x, callable(proc), "macro must be a procedure")
+                require(x, isinstance(proc, collections.Callable), "macro must be a procedure")
                 macro_table[v] = proc    # (define-macro v proc)
                 return None              #  => None; add v:proc to macro_table
             return [_define, v, exp]
@@ -268,13 +282,13 @@ def expand(x, toplevel=False):
     elif isa(x[0], Symbol) and x[0] in macro_table:
         return expand(macro_table[x[0]](*x[1:]), toplevel) # (m arg...) 
     else:                                #        => macroexpand if m isa macro
-        return map(expand, x)            # (f arg...) => expand each
+        return list(map(expand, x))            # (f arg...) => expand each
 
 def require(x, predicate, msg="wrong length"):
     "Signal a syntax error if predicate is false."
     if not predicate: raise SyntaxError(to_string(x)+': '+msg)
 
-_append, _cons, _let = map(Sym, "append cons let".split())
+_append, _cons, _let = list(map(Sym, "append cons let".split()))
 
 def expand_quasiquote(x):
     """Expand `x => 'x; `,x => x; `(,@x y) => (append x y) """
@@ -297,8 +311,8 @@ def let(*args):
     bindings, body = args[0], args[1:]
     require(x, all(isa(b, list) and len(b)==2 and isa(b[0], Symbol)
                    for b in bindings), "illegal binding list")
-    vars, vals = zip(*bindings)
-    return [[_lambda, list(vars)]+map(expand, body)] + map(expand, vals)
+    vars, vals = list(zip(*bindings))
+    return [[_lambda, list(vars)]+list(map(expand, body))] + list(map(expand, vals))
 
 macro_table = {_let:let} ## More macros can go here
 

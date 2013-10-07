@@ -6,12 +6,12 @@ import sys
 import PyQt4.QtCore as QtCore
 from PyQt4.QtCore import Qt
 import PyQt4.QtGui as QtGui
-from filerview import KeyEventHandler
 from filerview import TabViewModel
 from filerview import Subject
 import command
 import lispy
 import os.path
+import keymap
 
 # TODO まとめる
 horizontal_header = ['s', 'filename', 'filemode', 'st_ctime', 'st_size', ]
@@ -134,14 +134,13 @@ class KeyPressEater(QtCore.QObject):
 
     commandModeChanged = QtCore.pyqtSignal(bool)
 
-    def __init__(self, handler):
+    def __init__(self):
         QtCore.QObject.__init__(self)
-        self.handler = handler
         self._commandMode = False
 
     @QtCore.pyqtSlot(str)
-    def doCommand(self, command):
-        self.handler.do_command('(' + command + ')')
+    def doCommand(self, cmd):
+        do_command('(' + cmd + ')')
         self.setCommandMode(False)
 
     @QtCore.pyqtSlot(bool)
@@ -156,7 +155,9 @@ class KeyPressEater(QtCore.QObject):
                     self.setCommandMode(True)
                     return True
                 else:
-                    return self.handler.on_key_press(event)
+                    keymap.do_keymap(keymap.normal_map,
+                            keymap.Key(event.key(), event.modifiers()))
+                    return True
             else:
                 return QtCore.QObject.eventFilter(self, obj, event)
         else:
@@ -324,8 +325,7 @@ class View(QtCore.QObject):
     def __init__(self, model):
         QtCore.QObject.__init__(self)
         self.app = QtGui.QApplication(sys.argv)
-        handler = KeyEventHandler(model)
-        self.kpe = KeyPressEater(handler)
+        self.kpe = KeyPressEater()
         self.app.installEventFilter(self.kpe)
 
         self.main_window = QtGui.QMainWindow()
@@ -344,12 +344,24 @@ class View(QtCore.QObject):
     def set_window_size(self, width, height):
         self.main_window.resize(width, height)
 
+    def set_window_maximized(self):
+        self.main_window.showMaximized()
+
     def load_config(self):
         lispy.load(os.path.expanduser('.pyfilerrc'))
 
     def mainloop(self):
         self.app.exec_()
 
+def do_command(cmd):
+    logging.debug(cmd)
+    try:
+        val = lispy.eval(lispy.parse(cmd))
+        if val is not None:
+            logging.info(lispy.to_string(val))
+    except Exception as e:
+        logging.exception(e)
+    return True
 
 def main():
     model = TabViewModel()

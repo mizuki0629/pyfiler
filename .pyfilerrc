@@ -1,13 +1,12 @@
-; vim: filetype=scheme
+; vim:set filetype=scheme foldmethod=marker:
 
-; ä÷êî cxxr
+; Âü∫Êú¨ÁöÑ„Å™Èñ¢Êï∞{{{
+; Èñ¢Êï∞ cxxr
 (define cadr (lambda (x) (car (cdr x))))
 (define cdar (lambda (x) (cdr (car x))))
 (define caar (lambda (x) (car (car x))))
 (define cddr (lambda (x) (cdr (cdr x))))
 
-; TODO ê≥ÇµÇ¢Ç©ÇÌÇ©ÇÁÇ»Ç¢
-; http://www.geocities.jp/m_hiroi/func/abcscm31.html
 (define-macro cond
   (lambda args
     (if (null? args)
@@ -20,16 +19,29 @@
           `(if ,(caar args)
                (begin ,@(cdar args))
             (cond ,@(cdr args))))))))
-; TODO ÉGÉâÅ[Ç…Ç»ÇÈ
-;(cond
-  ;((windows?) (set-default-font "tahoma"))
-  ;((osx?) (set-default-font "Monaco")))
+;}}}
+
+(cond
+  ((windows?) (set-default-font "tahoma"))
+  ((osx?) (set-default-font "Monaco")))
 
 (set-window-size 1100 600)
 (set-window-title "pyfiler")
-(if (windows?)
-  (set-default-font "tahoma")
-  (set-default-font "Monaco"))
 
+(define-key normal-map "d" 'tabclose)
+(define-key normal-map "g" 'cursor-first)
+(define-key normal-map "h" 'cd-parent)
+(define-key normal-map "j" 'cursor-down)
+(define-key normal-map "k" 'cursor-up)
+(define-key normal-map "l" 'cd-or-exec)
+(define-key normal-map "C-l" 'tabnext)
+(define-key normal-map "C-h" 'tabprev)
+(define-key normal-map "r" 'reload-view)
 (define-key normal-map "t" 'tabnew)
-;(define-key normal-map "j" 'cursor-down)
+
+(define-key normal-map "a" 'select-all)
+(define-key normal-map "S-g" 'cursor-last)
+(define-key normal-map "S-r" 'reload-config)
+(define-key normal-map "S-Space" 'select-up)
+(define-key normal-map "Space" 'select-down)
+(define-key normal-map "Tab" 'change-focus)

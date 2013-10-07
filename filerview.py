@@ -8,8 +8,6 @@ from PyQt4.QtCore import Qt  # TODO qtに依存しない形にすること
 import lispy
 import command
 import imp
-import keymap
-
 
 class Subject(object):
     class Event(object):
@@ -231,87 +229,21 @@ class TabViewModel(Subject):
             self.currentIndex = index
 
     @Notify('tabchange')
-    def nextTab(self):
+    def nextTab(self, isloop=False):
         if self.currentIndex < len(self.tabs) - 1:
             self.currentIndex += 1
-        else:
+        elif isloop:
             self.currentIndex = 0
 
     @Notify('tabchange')
-    def prevTab(self):
+    def prevTab(self, isloop=False):
         if self.currentIndex > 0:
             self.currentIndex -= 1
-        else:
+        elif isloop:
             self.currentIndex = len(self.tabs) - 1
 
     def reload_commands(self):
         imp.reload(command)
-
-class KeyEventHandler(object):
-    def __init__(self, viewmodel):
-        self.viewmodel = viewmodel
-
-    def do_complite(self, command):
-        word = command
-        return [ s for key in lispy.global_env.keys if key.startswith(word)]
-
-    def do_command(self, command):
-        logging.debug(command)
-        try:
-            val = lispy.eval(lispy.parse(command))
-            if val is not None:
-                logging.info(lispy.to_string(val))
-        except Exception as e:
-            logging.exception(e)
-        return True
-
-    # TODO qtに依存しない形にすること
-    def on_key_press(self, event):
-        key = event.key()
-        shift = event.modifiers() & Qt.ShiftModifier
-        currentTab = self.viewmodel.currentTab()
-        current = currentTab.current
-        if key in keymap.qt_keymap:
-            if keymap.qt_keymap[key] in keymap.normal_map:
-                lispy.eval([keymap.normal_map[keymap.qt_keymap[key]]])
-                return True
-        if shift:
-            if key == Qt.Key_Space:
-                current.toggle_isselet_up()
-            elif key == Qt.Key_G:
-                current.cursor_last()
-            elif key == Qt.Key_H:
-                current.chdir_parent()
-            elif key == Qt.Key_R:
-                self.do_command("(reload-commands)")
-        else:
-            if key == Qt.Key_A:
-                current.toggle_isselect_all()
-            elif key == Qt.Key_K:
-                current.cursor_up()
-            elif key == Qt.Key_J:
-                current.cursor_down()
-            elif key == Qt.Key_L:
-                current.chdir_or_execute()
-            elif key == Qt.Key_Tab:
-                currentTab.change_focus()
-            elif key == Qt.Key_H:
-                current.chdir_parent()
-            elif key == Qt.Key_R:
-                current.reload()
-            elif key == Qt.Key_G:
-                current.cursor_first()
-            elif key == Qt.Key_N:
-                self.viewmodel.nextTab()
-            elif key == Qt.Key_P:
-                self.viewmodel.prevTab()
-            elif key == Qt.Key_D:
-                self.viewmodel.removeTab(self.viewmodel.currentIndex)
-            elif key == Qt.Key_T:
-                self.viewmodel.addTab(TwoScreenFilerViewModel())
-            if key == Qt.Key_Space:
-                self.do_command("(select-down)")
-        return True
 
 
 def main():

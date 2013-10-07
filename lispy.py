@@ -7,6 +7,7 @@
 
 import re, sys, io
 import collections
+import logging
 
 class Symbol(str): pass
 
@@ -106,7 +107,8 @@ def to_string(x):
 
 def load(filename):
     "Eval every expression from a file."
-    repl(None, InPort(open(filename)), None)
+    with open(filename) as f: 
+        repl(None, InPort(f), None)
 
 def repl(prompt='lispy> ', inport=InPort(sys.stdin), out=sys.stdout):
     "A prompt-read-eval-print loop."
@@ -119,7 +121,8 @@ def repl(prompt='lispy> ', inport=InPort(sys.stdin), out=sys.stdout):
             val = eval(x)
             if val is not None and out: print(to_string(val), file=out)
         except Exception as e:
-            print('%s: %s' % (type(e).__name__, e))
+            logging.exception(e)
+            #print('%s: %s' % (type(e).__name__, e))
 
 ################ Environment class
 

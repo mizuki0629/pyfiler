@@ -345,7 +345,7 @@ class View(QtCore.QObject):
         self.main_window.resize(width, height)
 
     def load_config(self):
-        lispy.load(os.path.expanduser('~/.pyfilerrc'))
+        lispy.load(os.path.expanduser('.pyfilerrc'))
 
     def mainloop(self):
         self.app.exec_()

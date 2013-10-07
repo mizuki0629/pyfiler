@@ -1,7 +1,35 @@
 ; vim: filetype=scheme
+
+; ä÷êî cxxr
+(define cadr (lambda (x) (car (cdr x))))
+(define cdar (lambda (x) (cdr (car x))))
+(define caar (lambda (x) (car (car x))))
+(define cddr (lambda (x) (cdr (cdr x))))
+
+; TODO ê≥ÇµÇ¢Ç©ÇÌÇ©ÇÁÇ»Ç¢
+; http://www.geocities.jp/m_hiroi/func/abcscm31.html
+(define-macro cond
+  (lambda args
+    (if (null? args)
+        '*undef*
+      (if (eq? (caar args) 'else)
+          `(begin ,@(cdar args))
+        (if (null? (cdar args))
+            `(let ((+value+ ,(caar args)))
+              (if +value+ +value+ (cond ,@(cdr args))))
+          `(if ,(caar args)
+               (begin ,@(cdar args))
+            (cond ,@(cdr args))))))))
+; TODO ÉGÉâÅ[Ç…Ç»ÇÈ
+;(cond
+  ;((windows?) (set-default-font "tahoma"))
+  ;((osx?) (set-default-font "Monaco")))
+
 (set-window-size 1100 600)
 (set-window-title "pyfiler")
-(set-default-font "Monaco")
+(if (windows?)
+  (set-default-font "tahoma")
+  (set-default-font "Monaco"))
 
 (define-key normal-map "t" 'tabnew)
 ;(define-key normal-map "j" 'cursor-down)

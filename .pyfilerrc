@@ -22,7 +22,7 @@
 ;}}}
 
 (cond
-  ((windows?) (set-default-font "tahoma"))
+  ((windows?) (set-default-font "tahoma" 10))
   ((osx?) (set-default-font "Monaco")))
 
 (set-window-size 1100 600)

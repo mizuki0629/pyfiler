@@ -173,6 +173,24 @@ class TwoScreenFilerWidget(QtGui.QWidget):
 
     def update(self, viewmodel, event):
         self.views[viewmodel.focus].tablewidget.setFocus(Qt.OtherFocusReason)
+        focusedColor = Qt.darkGreen
+        elseColor = Qt.gray
+        if viewmodel.focus == viewmodel.FocusLeft:
+            p = self.leftWidget.tablewidget.palette()
+            p.setColor(QtGui.QPalette.Highlight, focusedColor)
+            self.leftWidget.tablewidget.setPalette(p)
+
+            p = self.rightWidget.tablewidget.palette()
+            p.setColor(QtGui.QPalette.Highlight, elseColor)
+            self.rightWidget.tablewidget.setPalette(p)
+        else:
+            p = self.leftWidget.tablewidget.palette()
+            p.setColor(QtGui.QPalette.Highlight, elseColor)
+            self.leftWidget.tablewidget.setPalette(p)
+
+            p = self.rightWidget.tablewidget.palette()
+            p.setColor(QtGui.QPalette.Highlight, focusedColor)
+            self.rightWidget.tablewidget.setPalette(p)
 
     def setup_ui(self, viewmodel):
         panel_layout = QtGui.QHBoxLayout()
@@ -200,10 +218,10 @@ class LogWidet(QtGui.QPlainTextEdit):
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
 
         #sys.stderrへ出力するハンドラーを定義
-        sh = logging.StreamHandler()
-        sh.setLevel(logging.DEBUG)
-        sh.setFormatter(formatter)
-        logger.addHandler(sh)
+        #sh = logging.StreamHandler()
+        #sh.setLevel(logging.DEBUG)
+        #sh.setFormatter(formatter)
+        #logger.addHandler(sh)
 
         lw = logging.StreamHandler(stream=self)
         lw.terminator = ''

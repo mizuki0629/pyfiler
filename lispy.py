@@ -1,3 +1,4 @@
+# coding: utf-8
 ################ Scheme Interpreter in Python
 
 ## (c) Peter Norvig, 2010; See http://norvig.com/lispy2.html
@@ -107,12 +108,11 @@ def to_string(x):
 
 def load(filename):
     "Eval every expression from a file."
-    with open(filename) as f: 
+    with open(filename, encoding='utf-8') as f: 
         repl(None, InPort(f), None)
 
 def repl(prompt='lispy> ', inport=InPort(sys.stdin), out=sys.stdout):
     "A prompt-read-eval-print loop."
-    sys.stderr.write("Lispy version 2.0\n")
     while True:
         try:
             if prompt: sys.stderr.write(prompt)
@@ -331,5 +331,6 @@ eval(parse("""(begin
 )"""))
 
 if __name__ == '__main__':
+    sys.stderr.write("Lispy version 2.0\n")
     repl()
 

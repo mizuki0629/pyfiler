@@ -7,6 +7,7 @@
 (define caar (lambda (x) (car (car x))))
 (define cddr (lambda (x) (cdr (cdr x))))
 
+
 (define-macro cond
   (lambda args
     (if (null? args)
@@ -19,6 +20,23 @@
           `(if ,(caar args)
                (begin ,@(cdar args))
             (cond ,@(cdr args))))))))
+
+(define (assq x y)
+  (cond ((null? y) nil)
+		((eq? x (caar y)) (car y))
+		(#t (assoc x (cdr y))) ))
+
+(define (assoc x y)
+  (cond ((null? y) nil)
+		((equal? x (caar y)) (car y))
+		(#t (assoc x (cdr y))) ))
+
+(define (filter predicate ls)
+  (cond ((null? ls) nil)
+		((predicate (car ls))
+		 (cons (car ls) (filter predicate (cdr ls))))
+		(else
+		  (filter predicate (cdr ls)))))
 ;}}}
 
 (cond
@@ -45,3 +63,6 @@
 (define-key normal-map "S-Space" 'select-up)
 (define-key normal-map "Space" 'select-down)
 (define-key normal-map "Tab" 'change-focus)
+
+(define (gt4? x) (> (length (get-file-state "filename" x)) 4))
+;(set-filter gt4?)

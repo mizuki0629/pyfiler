@@ -2,6 +2,7 @@ import lispy
 import logging
 import platform
 import keymap
+import re
 
 
 def Command(func):
@@ -177,4 +178,19 @@ def select_up():
 @Command_
 def select_all():
     return model.currentTab().current.toggle_isselect_all()
+
+@Command_
+def set_filter(func):
+    model.currentTab().current.filter = func
+    model.currentTab().current.reload()
+
+@Command_
+def get_file_state(key, file):
+    return file.state[key]
+
+@Command_
+def regix_filter(pattern, state):
+    def func(file):
+        return re.search(pattern, file.state[state]) is not None
+    return func
 

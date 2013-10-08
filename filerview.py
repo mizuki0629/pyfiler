@@ -47,17 +47,20 @@ class FileViewModel(object):
     def __repr__(self):
         return self.filename + ' : ' + str(self.isselect)
 
+def nop_filter(file):
+    return True
 
 class FilerViewModel(Subject):
     def __init__(self, filer=BaseFiler):
         Subject.__init__(self)
+        self.filter = nop_filter
         self.filer = filer()
         self.files = []
         self.cursor = 0
         self.reload()
 
     def _up_cursor(self):
-        if self.cursor >= 0:
+        if self.cursor > 0:
             self.cursor = self.cursor - 1
 
     def _down_cursor(self):
@@ -71,9 +74,15 @@ class FilerViewModel(Subject):
         def reload_after_original_function(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
             self.cursor = 0
-            self.files = []
-            for state in self.filer.ls():
-                self.files.append(FileViewModel(state))
+            ls = [FileViewModel(state) for state in self.filer.ls()]
+            if isinstance(self.filter, lispy.Procedure):
+                self.files = lispy.eval([
+                    lispy.Symbol('filter'),
+                    self.filter,
+                    [lispy._quote, ls]
+                    ])
+            else:
+                self.files = list(filter(self.filter, [FileViewModel(state) for state in self.filer.ls()]))
             return result
         return reload_after_original_function
 

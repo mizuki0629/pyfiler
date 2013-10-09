@@ -46,6 +46,7 @@
 (set-window-size 1100 600)
 (set-window-title "pyfiler")
 
+; define-key {{{
 (define-key normal-map "d" 'tabclose)
 (define-key normal-map "g" 'cursor-first)
 (define-key normal-map "h" 'cd-parent)
@@ -65,6 +66,34 @@
 (define-key normal-map "Tab" 'change-focus)
 (define-key normal-map "S-Return" 'open-assoc)
 (define-key normal-map "S-h" 'popd)
+;}}}
 
+(define-macro $call/mod
+	(lambda args
+	  `(py-call-with-module (quote ,(car args)) (quote ,(cadr args)) ,@(cddr args))))
+
+(define-macro $class
+	(lambda args
+	  `(py-class (quote ,(car args)) (quote ,(cadr args)))))
+
+(define-macro $call
+	(lambda args
+	  `(py-call (quote ,(car args)) ,@(cdr args))))
+
+(define-macro $attr
+	(lambda args
+	  `(py-attr (quote ,(car args)) ,@(cdr args))))
+
+(define-macro $mcall
+	(lambda args
+	  `(py-method-call (quote ,(car args)) ,@(cdr args))))
+
+(define-macro $import
+	(lambda args
+	  `(py-import (quote ,(car args)) ,@(cdr args))))
+
+($import json)
+($call print ($call/mod json dumps '("hoge.jpg")))
+;($mcall get command-map "hoge")
 ;(define (gt4? x) (> (length (get-file-state "filename" x)) 4))
 ;(set-filter gt4?)

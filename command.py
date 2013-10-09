@@ -203,3 +203,27 @@ def open_assoc():
 def popd():
     model.currentTab().current.popd()
 
+@Command_
+def py_call_method(methodname, self, *args):
+    return getattr(self.__class__, methodname)(self, *args)
+
+@Command_
+def py_call_with_module(modulename, funcname, *args):
+    return getattr(globals()[modulename], funcname)(*args)
+
+@Command_
+def py_call(funcname, *args):
+    return globals()['__builtins__'][funcname](*args)
+
+@Command_
+def py_attr(attrname, self):
+    return getattr(self, attrname)
+
+@Command_
+def py_import(modname):
+    globals()[modname] = __import__(modname, globals(), locals(), [], 0)
+
+@Command_
+def py_class(modname, classname):
+    return getattr(globals()[modulename], classname)
+

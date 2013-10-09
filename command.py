@@ -194,3 +194,12 @@ def regix_filter(pattern, state):
         return re.search(pattern, file.state[state]) is not None
     return func
 
+
+@Command_
+def open_assoc():
+    return model.currentTab().current.open_assoc()
+
+@Command_
+def popd():
+    model.currentTab().current.popd()
+

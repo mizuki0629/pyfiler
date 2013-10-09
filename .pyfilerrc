@@ -63,6 +63,8 @@
 (define-key normal-map "S-Space" 'select-up)
 (define-key normal-map "Space" 'select-down)
 (define-key normal-map "Tab" 'change-focus)
+(define-key normal-map "S-Return" 'open-assoc)
+(define-key normal-map "S-h" 'popd)
 
-(define (gt4? x) (> (length (get-file-state "filename" x)) 4))
+;(define (gt4? x) (> (length (get-file-state "filename" x)) 4))
 ;(set-filter gt4?)

@@ -6,6 +6,9 @@ import os.path
 import shutil
 import stat
 import datetime
+import subprocess
+import logging
+import platform
 
 
 class BaseFiler(object):
@@ -54,14 +57,28 @@ class BaseFiler(object):
     def ls(self):
         return (self.stat(f) for f in os.listdir(self.cwd))
 
+    def open_assoc(self, path):
+        abspath = self._abspath(path)
+        logging.debug(abspath)
+        subprocess.Popen([abspath], shell=True )
+
     def chdir_or_execute(self, path):
         abspath = self._abspath(path)
         if os.path.isdir(abspath):
             self._cwd = abspath
             return self._cwd
         else:
-            # TODO 処理を作ること
-            pass
+            root, ext = os.path.splitext(path)
+            if ext == '.lnk' and 'Windows' == platform.system():
+                import win32com.client
+
+                shell = win32com.client.Dispatch("WScript.Shell")
+                shortcut = shell.CreateShortCut(abspath)
+                self._cwd = shortcut.Targetpath
+                return self._cwd
+
+
+
 
     def chdir(self, path):
         abspath = self._abspath(path)

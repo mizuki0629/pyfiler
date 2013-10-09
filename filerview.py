@@ -122,6 +122,9 @@ class FilerViewModel(Subject):
     def chdir_parent(self):
         self.filer.chdir('../')
 
+    def open_assoc(self):
+        self.filer.open_assoc(self.cursor_file_abspath)
+
     @Notify('chdir')
     @Reload
     def chdir_or_execute(self):
@@ -200,7 +203,7 @@ class TwoScreenFilerViewModel(Subject):
     right = property(get_view_right)
 
     def get_displayname(self):
-        return os.path.basename(self.left.cwd()) + ' : ' + os.path.basename(self.right.cwd())
+        return os.path.basename(self.left.cwd()) + ' | ' + os.path.basename(self.right.cwd())
     displayname = property(get_displayname)
 
     def __repr__(self):

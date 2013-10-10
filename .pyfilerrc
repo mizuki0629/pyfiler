@@ -1,5 +1,6 @@
 ; vim:set filetype=scheme foldmethod=marker:
 
+; === 関数定義 === {{{
 ; 基本的な関数{{{
 ; 関数 cxxr
 (define cadr (lambda (x) (car (cdr x))))
@@ -39,6 +40,109 @@
 		  (filter predicate (cdr ls)))))
 ;}}}
 
+; python binding macro {{{
+(define-macro $call/mod
+	(lambda args
+	  `(py-call-with-module (quote ,(car args)) (quote ,(cadr args)) ,@(cddr args))))
+
+(define-macro $class
+	(lambda args
+	  `(py-class (quote ,(car args)) (quote ,(cadr args)))))
+
+(define-macro $call
+	(lambda args
+	  `(py-call (quote ,(car args)) ,@(cdr args))))
+
+(define-macro $attr
+	(lambda args
+	  `(py-attr (quote ,(car args)) ,@(cdr args))))
+
+(define-macro $mcall
+	(lambda args
+	  `(py-method-call (quote ,(car args)) ,@(cdr args))))
+
+(define-macro $import
+	(lambda args
+	  `(py-import (quote ,(car args)) ,@(cdr args))))
+;}}}
+
+(define (filer-current-tab)
+  ($mcall currentTab filer-model))
+(define (filer-current-pain)
+  ($attr current (filer-current-tab)))
+
+; platform {{{
+($import platform)
+(define (platform? str)
+  (equal? ($call/mod platform system) str))
+(define (windows?) (platform? "Windows"))
+(define (mac?) (platform? "Darwin"))
+; }}}
+
+; file select {{{
+(define (select-all)
+  ($mcall toggle_isselect_all (filer-current-pain)))
+
+(define (select-up)
+  ($mcall toggle_isselet_up (filer-current-pain)))
+
+(define (select-down)
+  ($mcall toggle_isselet_down (filer-current-pain)))
+;}}}
+
+; tab {{{
+(define (tabnew)
+  ($mcall tabnew filer-model))
+(define (tabclose)
+  ($mcall removeTab filer-model ($attr currentIndex filer-model)))
+(define (tabnext)
+  ($mcall nextTab filer-model))
+(define (tabprev)
+  ($mcall prevTab filer-model))
+(define (tabchange n)
+  ($mcall changeTab filer-model n))
+(define (tabfirst)
+  (tabchange  0))
+(define (tablast)
+  (tabchange  (- ($call len ($attr tabs filer-model)) 1)))
+; }}}
+
+(define (reload-config)
+  ($mcall load_config filer-view))
+
+(define (reload-command)
+  ($mcall reload_commands filer-model))
+
+(define (pwd)
+  ($mcall cwd (filer-current-pain)))
+
+; cursor {{{
+(define (cursor-first)
+  ($mcall cursor_first (filer-current-pain)))
+
+(define (cursor-last)
+  ($mcall cursor_last (filer-current-pain)))
+
+(define (cursor-up)
+  ($mcall cursor_up (filer-current-pain)))
+
+(define (cursor-down)
+  ($mcall cursor_down (filer-current-pain)))
+;}}}
+
+; view api {{{
+;(define set-window-size (lambda args
+  ;($mcall set_window_size filer-view args)))
+
+(define (set-window-maximized)
+  ($mcall set_window_maximized filer-view))
+
+; }}}
+
+; }}}
+
+
+; === 設定 === {{{
 (cond
   ((windows?) (set-default-font "tahoma" 10))
   ((osx?) (set-default-font "Monaco")))
@@ -67,33 +171,4 @@
 (define-key normal-map "S-Return" 'open-assoc)
 (define-key normal-map "S-h" 'popd)
 ;}}}
-
-(define-macro $call/mod
-	(lambda args
-	  `(py-call-with-module (quote ,(car args)) (quote ,(cadr args)) ,@(cddr args))))
-
-(define-macro $class
-	(lambda args
-	  `(py-class (quote ,(car args)) (quote ,(cadr args)))))
-
-(define-macro $call
-	(lambda args
-	  `(py-call (quote ,(car args)) ,@(cdr args))))
-
-(define-macro $attr
-	(lambda args
-	  `(py-attr (quote ,(car args)) ,@(cdr args))))
-
-(define-macro $mcall
-	(lambda args
-	  `(py-method-call (quote ,(car args)) ,@(cdr args))))
-
-(define-macro $import
-	(lambda args
-	  `(py-import (quote ,(car args)) ,@(cdr args))))
-
-($import json)
-($call print ($call/mod json dumps '("hoge.jpg")))
-;($mcall get command-map "hoge")
-;(define (gt4? x) (> (length (get-file-state "filename" x)) 4))
-;(set-filter gt4?)
+;}}}

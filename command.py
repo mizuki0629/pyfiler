@@ -1,8 +1,5 @@
 import lispy
-import logging
-import platform
 import keymap
-import re
 
 
 def Command(func):
@@ -42,62 +39,37 @@ except NameError:
 def init(v, m):
     global model, view
     view, model = v, m
+    lispy.global_env.update({'filer-view': view})
+    lispy.global_env.update({'filer-model': model})
 
-@Command
-def tabclose():
-    model.removeTab(model.currentIndex)
-
-@Command
-def tabnew():
-    model.tabnew()
-
-
-@Command
-def tabnext(num=1):
-    for n in range(num):
-        model.nextTab()
-
-
-@Command
-def tabprev(num=1):
-    for n in range(num):
-        model.prevTab()
-
-
-@Command
-def tabcount():
-    return len(model.tabs)
-
-
-@Command
-def tabchange(num):
-    model.changeTab(num)
-
-
-@Command
-def tabfirst():
-    model.changeTab(0)
-
-
-@Command
-def tablast():
-    model.changeTab(len(model.tabs) - 1)
-
-
-@Command
-def pwd():
-    return model.currentTab().current.cwd()
-
+# python - lispy binding
+@Command_
+def py_method_call (methodname, self, *args):
+    return getattr(self.__class__, methodname)(self, *args)
 
 @Command_
-def select_down():
-    return model.currentTab().current.toggle_isselet_down()
-
+def py_call_with_module(modulename, funcname, *args):
+    return getattr(globals()[modulename], funcname)(*args)
 
 @Command_
-def reload_commands():
-    model.reload_commands()
+def py_call(funcname, *args):
+    return globals()['__builtins__'][funcname](*args)
 
+@Command_
+def py_attr(attrname, self):
+    return getattr(self, attrname)
+
+@Command_
+def py_import(modname):
+    globals()[modname] = __import__(modname, globals(), locals(), [], 0)
+
+@Command_
+def py_class(modname, classname):
+    return getattr(globals()[modname], classname)
+
+
+
+# TODO 以下　lisp置き換え
 
 @Command_
 def set_default_font(*args):
@@ -119,33 +91,8 @@ def set_window_title(*args):
 
 
 @Command_
-def reload_config(*args):
-    view.load_config(*args)
-
-
-@Command_
 def define_key(kmap, keystr, action):
     keymap.add_keymap(kmap, keystr, action)
-
-@CommandName('windows?')
-def is_windows():
-    return "Windows" == platform.system()
-
-@CommandName('osx?')
-def is_osx():
-    return "Darwin" == platform.system()
-
-@Command_
-def platform_system():
-    return platform.system()
-
-@Command_
-def cursor_up():
-    return model.currentTab().current.cursor_up()
-
-@Command_
-def cursor_down():
-    return model.currentTab().current.cursor_down()
 
 @Command_
 def cd_or_exec():
@@ -164,22 +111,6 @@ def reload_view():
     return model.currentTab().current.reload()
 
 @Command_
-def cursor_first():
-    return model.currentTab().current.cursor_first()
-
-@Command_
-def cursor_last():
-    return model.currentTab().current.cursor_last()
-
-@Command_
-def select_up():
-    return model.currentTab().current.toggle_isselet_up()
-
-@Command_
-def select_all():
-    return model.currentTab().current.toggle_isselect_all()
-
-@Command_
 def set_filter(func):
     model.currentTab().current.filter = func
     model.currentTab().current.reload()
@@ -189,41 +120,10 @@ def get_file_state(key, file):
     return file.state[key]
 
 @Command_
-def regix_filter(pattern, state):
-    def func(file):
-        return re.search(pattern, file.state[state]) is not None
-    return func
-
-
-@Command_
 def open_assoc():
     return model.currentTab().current.open_assoc()
 
 @Command_
 def popd():
     model.currentTab().current.popd()
-
-@Command_
-def py_call_method(methodname, self, *args):
-    return getattr(self.__class__, methodname)(self, *args)
-
-@Command_
-def py_call_with_module(modulename, funcname, *args):
-    return getattr(globals()[modulename], funcname)(*args)
-
-@Command_
-def py_call(funcname, *args):
-    return globals()['__builtins__'][funcname](*args)
-
-@Command_
-def py_attr(attrname, self):
-    return getattr(self, attrname)
-
-@Command_
-def py_import(modname):
-    globals()[modname] = __import__(modname, globals(), locals(), [], 0)
-
-@Command_
-def py_class(modname, classname):
-    return getattr(globals()[modulename], classname)
 

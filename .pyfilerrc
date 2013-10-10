@@ -82,10 +82,8 @@
 ; file select {{{
 (define (select-all)
   ($mcall toggle_isselect_all (filer-current-pain)))
-
 (define (select-up)
   ($mcall toggle_isselet_up (filer-current-pain)))
-
 (define (select-down)
   ($mcall toggle_isselet_down (filer-current-pain)))
 ;}}}
@@ -109,34 +107,47 @@
 
 (define (reload-config)
   ($mcall load_config filer-view))
-
 (define (reload-command)
   ($mcall reload_commands filer-model))
-
-(define (pwd)
-  ($mcall cwd (filer-current-pain)))
+(define (reload-pain)
+  ($mcall reload (filer-current-pain)))
 
 ; cursor {{{
 (define (cursor-first)
   ($mcall cursor_first (filer-current-pain)))
-
 (define (cursor-last)
   ($mcall cursor_last (filer-current-pain)))
-
 (define (cursor-up)
   ($mcall cursor_up (filer-current-pain)))
-
 (define (cursor-down)
   ($mcall cursor_down (filer-current-pain)))
 ;}}}
 
+(define (change-pain)
+  ($mcall change_focus (filer-current-pain)))
+(define (cd-or-exec)
+  ($mcall chdir_or_execute (filer-current-pain)))
+(define (open-assoc)
+  ($mcall open_assoc (filer-current-pain)))
+(define (cd-parent)
+  ($mcall chdir_parent (filer-current-pain)))
+(define (popd)
+  ($mcall popd (filer-current-pain)))
+(define (pwd)
+  ($mcall cwd (filer-current-pain)))
+
 ; view api {{{
-;(define set-window-size (lambda args
-  ;($mcall set_window_size filer-view args)))
+(define (set-window-size width height)
+  ($mcall set_window_size filer-view width height))
 
 (define (set-window-maximized)
   ($mcall set_window_maximized filer-view))
 
+(define (set-default-font family)
+  ($mcall set_defaultfont filer-view family))
+
+(define (set-window-title title)
+  ($mcall set_window_title filer-view title))
 ; }}}
 
 ; }}}
@@ -145,7 +156,7 @@
 ; === 設定 === {{{
 (cond
   ((windows?) (set-default-font "tahoma" 10))
-  ((osx?) (set-default-font "Monaco")))
+  ((mac?) (set-default-font "Monaco")))
 
 (set-window-size 1100 600)
 (set-window-title "pyfiler")
@@ -159,7 +170,7 @@
 (define-key normal-map "l" 'cd-or-exec)
 (define-key normal-map "C-l" 'tabnext)
 (define-key normal-map "C-h" 'tabprev)
-(define-key normal-map "r" 'reload-view)
+(define-key normal-map "r" 'reload-pain)
 (define-key normal-map "t" 'tabnew)
 
 (define-key normal-map "a" 'select-all)
@@ -167,7 +178,7 @@
 (define-key normal-map "S-r" 'reload-config)
 (define-key normal-map "S-Space" 'select-up)
 (define-key normal-map "Space" 'select-down)
-(define-key normal-map "Tab" 'change-focus)
+(define-key normal-map "Tab" 'change-pain)
 (define-key normal-map "S-Return" 'open-assoc)
 (define-key normal-map "S-h" 'popd)
 ;}}}

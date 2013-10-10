@@ -72,43 +72,8 @@ def py_class(modname, classname):
 # TODO 以下　lisp置き換え
 
 @Command_
-def set_default_font(*args):
-    view.set_defaultfont(*args)
-
-
-@Command_
-def set_window_size(*args):
-    view.set_window_size(*args)
-
-@Command_
-def set_window_maximized(*args):
-    view.set_window_maximized(*args)
-
-
-@Command_
-def set_window_title(*args):
-    view.set_window_title(*args)
-
-
-@Command_
 def define_key(kmap, keystr, action):
     keymap.add_keymap(kmap, keystr, action)
-
-@Command_
-def cd_or_exec():
-    return model.currentTab().current.chdir_or_execute()
-
-@Command_
-def change_focus():
-    return model.currentTab().change_focus()
-
-@Command_
-def cd_parent():
-    return model.currentTab().current.chdir_parent()
-
-@Command_
-def reload_view():
-    return model.currentTab().current.reload()
 
 @Command_
 def set_filter(func):
@@ -118,12 +83,4 @@ def set_filter(func):
 @Command_
 def get_file_state(key, file):
     return file.state[key]
-
-@Command_
-def open_assoc():
-    return model.currentTab().current.open_assoc()
-
-@Command_
-def popd():
-    model.currentTab().current.popd()
 

@@ -143,8 +143,9 @@
 (define (set-window-maximized)
   ($mcall set_window_maximized filer-view))
 
-(define (set-default-font family)
-  ($mcall set_defaultfont filer-view family))
+(define set-default-font
+  (lambda args
+	  (apply ($attr set_defaultfont filer-view) args)))
 
 (define (set-window-title title)
   ($mcall set_window_title filer-view title))

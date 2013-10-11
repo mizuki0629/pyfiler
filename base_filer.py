@@ -65,6 +65,7 @@ class BaseFiler(object):
     def chdir_or_execute(self, path):
         abspath = self._abspath(path)
         if os.path.isdir(abspath):
+            self.cwd_history.append(self._cwd)
             self._cwd = abspath
             return self._cwd
         else:
@@ -74,26 +75,24 @@ class BaseFiler(object):
 
                 shell = win32com.client.Dispatch("WScript.Shell")
                 shortcut = shell.CreateShortCut(abspath)
+                self.cwd_history.append(self._cwd)
                 self._cwd = shortcut.Targetpath
                 return self._cwd
-
-
 
 
     def chdir(self, path):
         abspath = self._abspath(path)
         if os.path.isdir(abspath):
+            self.cwd_history.append(self._cwd)
             self._cwd = abspath
             return self._cwd
         else:
             raise IOError()
 
-    def pushd(self, path):
-        self.cwd_history.append(self.cwd)
-        return self.chdir(path)
-
     def popd(self):
-        return self.chdir(self.cwd_history.pop())
+        if len(self.cwd_history) > 0:
+            self._cwd = self.cwd_history.pop()
+            print(self._cwd)
 
     def rename(self, src, dst):
         abs_src = self._abspath(src)

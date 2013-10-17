@@ -66,10 +66,12 @@
 	  `(py-import (quote ,(car args)) ,@(cdr args))))
 ;}}}
 
-(define (filer-current-tab)
+(define (tabcurrent)
   ($mcall currentTab filer-model))
-(define (filer-current-pain)
-  ($attr current (filer-current-tab)))
+(define (pain-current)
+  ($attr current (tabcurrent)))
+(define (pain-other)
+  ($attr other (tabcurrent)))
 
 ; platform {{{
 ($import platform)
@@ -81,11 +83,11 @@
 
 ; file select {{{
 (define (select-all)
-  ($mcall toggle_isselect_all (filer-current-pain)))
+  ($mcall toggle_isselect_all (pain-current)))
 (define (select-up)
-  ($mcall toggle_isselet_up (filer-current-pain)))
+  ($mcall toggle_isselet_up (pain-current)))
 (define (select-down)
-  ($mcall toggle_isselet_down (filer-current-pain)))
+  ($mcall toggle_isselet_down (pain-current)))
 ;}}}
 
 ; tab {{{
@@ -110,31 +112,35 @@
 (define (reload-command)
   ($mcall reload_commands filer-model))
 (define (reload-pain)
-  ($mcall reload (filer-current-pain)))
+  ($mcall reload (pain-current)))
 
 ; cursor {{{
 (define (cursor-first)
-  ($mcall cursor_first (filer-current-pain)))
+  ($mcall cursor_first (pain-current)))
 (define (cursor-last)
-  ($mcall cursor_last (filer-current-pain)))
+  ($mcall cursor_last (pain-current)))
 (define (cursor-up)
-  ($mcall cursor_up (filer-current-pain)))
+  ($mcall cursor_up (pain-current)))
 (define (cursor-down)
-  ($mcall cursor_down (filer-current-pain)))
+  ($mcall cursor_down (pain-current)))
 ;}}}
 
 (define (change-pain)
-  ($mcall change_focus (filer-current-pain)))
+  ($mcall change_focus (tabcurrent)))
 (define (cd-or-exec)
-  ($mcall chdir_or_execute (filer-current-pain)))
+  ($mcall chdir_or_execute (pain-current)))
 (define (open-assoc)
-  ($mcall open_assoc (filer-current-pain)))
+  ($mcall open_assoc (pain-current)))
 (define (cd-parent)
-  ($mcall chdir_parent (filer-current-pain)))
+  ($mcall chdir_parent (pain-current)))
 (define (popd)
-  ($mcall popd (filer-current-pain)))
+  ($mcall popd (pain-current)))
 (define (pwd)
-  ($mcall cwd (filer-current-pain)))
+  ($mcall cwd (pain-current)))
+(define (cd-other-to-current)
+  ($mcall chdir (pain-other) ($mcall cwd (pain-current))))
+(define (cd-current-to-other)
+  ($mcall chdir (pain-current) ($mcall cwd (pain-other))))
 
 ; view api {{{
 (define (set-window-size width height)
@@ -173,6 +179,8 @@
 (define-key normal-map "C-h" 'tabprev)
 (define-key normal-map "r" 'reload-pain)
 (define-key normal-map "t" 'tabnew)
+(define-key normal-map "o" 'cd-other-to-current)
+(define-key normal-map "C-o" 'cd-current-to-other)
 
 (define-key normal-map "a" 'select-all)
 (define-key normal-map "S-g" 'cursor-last)

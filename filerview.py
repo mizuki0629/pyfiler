@@ -4,10 +4,10 @@
 import logging
 from base_filer import BaseFiler
 import os.path
-from PyQt4.QtCore import Qt  # TODO qtに依存しない形にすること
 import lispy
 import command
 import imp
+
 
 class Subject(object):
     class Event(object):
@@ -47,14 +47,17 @@ class FileViewModel(object):
     def __repr__(self):
         return self.filename + ' : ' + str(self.isselect)
 
-def nop_filter(file):
-    return True
+def nop_filter(*args, **kwargs):
+    def filter_imp(file):
+        return True
+    return filter_imp
 
 class FilerViewModel(Subject):
     def __init__(self, filer=BaseFiler):
         Subject.__init__(self)
         self.filter = nop_filter
         self.filer = filer()
+        self.filer_args = []
         self.files = []
         self.cursor = 0
         self.reload()
@@ -78,7 +81,7 @@ class FilerViewModel(Subject):
             if isinstance(self.filter, lispy.Procedure):
                 self.files = lispy.eval([
                     lispy.Symbol('filter'),
-                    self.filter,
+                    [self.filter] + self.filter_args,
                     [lispy._quote, ls]
                     ])
             else:
@@ -122,6 +125,11 @@ class FilerViewModel(Subject):
     def chdir_parent(self):
         self.filer.chdir('../')
 
+    @Notify('chdir')
+    @Reload
+    def chdir(self, path):
+        self.filer.chdir(path)
+
     def open_assoc(self):
         self.filer.open_assoc(self.cursor_file_abspath)
 
@@ -164,6 +172,19 @@ class TwoScreenFilerViewModel(Subject):
     FocusLeft = 0
     FocusRight = 1
 
+    def get_current(self):
+        return self._current
+
+    def set_current(self, left_or_right):
+        self._current = left_or_right
+        if left_or_right is self.left:
+            self.focus = self.FocusLeft
+        else:
+            self.focus = self.FocusRight
+    current = property(get_current, set_current)
+
+    other = property(lambda self: self.right if self.focus == self.FocusLeft else self.left)
+
     def __init__(self, view_left=FilerViewModel,
                  view_right=FilerViewModel):
         Subject.__init__(self)
@@ -171,7 +192,6 @@ class TwoScreenFilerViewModel(Subject):
         self.left.attach(self)
         self.right.attach(self)
         self.current = self.left
-        self.focus = self.FocusLeft
 
     def update(self, viewmodel, event):
         if event.kind == 'chdir':
@@ -189,10 +209,8 @@ class TwoScreenFilerViewModel(Subject):
     def change_focus(self):
         if self.current == self.left:
             self.current = self.right
-            self.focus = self.FocusRight
         else:
             self.current = self.left
-            self.focus = self.FocusLeft
 
     def get_view_left(self):
         return self.views[0]

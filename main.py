@@ -294,8 +294,22 @@ class CentralWidget(QtGui.QWidget):
         log.setMaximumHeight(100)
         panel.addWidget(log)
 
+        panel2 = QtGui.QHBoxLayout()
+        panel2.setContentsMargins(0, 0, 0, 0)
+        self.commandLabel = QtGui.QLabel("hogehoge")
+
+        self.commandLabel.setStyleSheet("""
+        QLabel {
+            background-color: darkmagenta;
+            color: white;
+            font: bold;
+            margin: 0px;
+        }""")
+
         self.commandLine = CommandLineWidget()
-        panel.addWidget(self.commandLine)
+        panel2.addWidget(self.commandLabel)
+        panel2.addWidget(self.commandLine)
+        panel.addLayout(panel2)
         self.commandLine.focussed.connect(self.commandlog)
 
 

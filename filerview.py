@@ -7,6 +7,8 @@ import os.path
 import lispy
 import command
 import imp
+import keymap
+import re
 
 
 class Subject(object):
@@ -61,6 +63,8 @@ class FilerViewModel(Subject):
         self.files = []
         self.cursor = 0
         self.reload()
+        self.cursor_bak = None
+        self.search_str = None
 
     def _up_cursor(self):
         if self.cursor > 0:
@@ -125,18 +129,13 @@ class FilerViewModel(Subject):
     def chdir_parent(self):
         self.filer.chdir('../')
 
-    @Notify('chdir')
-    @Reload
-    def chdir(self, path):
-        self.filer.chdir(path)
-
     def open_assoc(self):
         self.filer.open_assoc(self.cursor_file_abspath)
 
     @Notify('chdir')
     @Reload
-    def chdir_or_execute(self):
-        self.filer.chdir_or_execute(self.cursor_file_abspath)
+    def chdir(self):
+        self.filer.chdir(self.cursor_file_abspath)
 
     def cwd(self):
         return self.filer.cwd
@@ -166,6 +165,58 @@ class FilerViewModel(Subject):
 
     def __repr__(self):
         return self.cwd()
+
+
+    def rotate_list(self, l, y=1):
+       if len(l) == 0:
+          return l
+       y = y % len(l)    # Why? this works for negative y
+
+       return l[y:] + l[:y]
+
+    @Notify('cursor')
+    def search(self, sstr=None):
+        if sstr is None:
+            if self.search_str is None:
+                return
+            else:
+                sstr = self.search_str
+                self.cursor_bak = self.cursor
+        if self.cursor_bak is None:
+            self.cursor_bak = self.cursor
+
+        for index, f in self.rotate_list(list(enumerate(self.files)), self.cursor_bak+1):
+            if re.search(sstr, f.state['filename']):
+                self.cursor = index
+                return
+
+    @Notify('cursor')
+    def rsearch(self, sstr=None):
+        if sstr is None:
+            if self.search_str is None:
+                return
+            else:
+                sstr = self.search_str
+                self.cursor_bak = self.cursor
+        if self.cursor_bak is None:
+            self.cursor_bak = self.cursor
+
+        for index, f in reversed(self.rotate_list(list(enumerate(self.files)), self.cursor_bak)):
+            if re.search(sstr, f.state['filename']):
+                self.cursor = index
+                return
+
+
+    @Notify('cursor')
+    def search_cancel(self):
+        if self.cursor_bak is not None:
+            self.cursor = self.cursor_bak
+            self.cursor_bak = None
+
+    @Notify('cursor')
+    def search_enter(self, sstr):
+        self.cursor_bak = None
+        self.search_str = sstr
 
 
 class TwoScreenFilerViewModel(Subject):
@@ -227,6 +278,9 @@ class TwoScreenFilerViewModel(Subject):
     def __repr__(self):
         return self.left.cwd() + ' | ' + self.right.cwd()
 
+NORMAL_MODE = 'normal'
+COMMAND_MODE = 'command'
+SEARCH_MODE = 'search'
 
 class TabViewModel(Subject):
     def __init__(self):
@@ -234,6 +288,35 @@ class TabViewModel(Subject):
         self.tabs = []
         self.currentIndex = 0
         self.addTab(TwoScreenFilerViewModel())
+        self.mode = NORMAL_MODE
+
+    def get_mode(self):
+        return self._mode
+
+    @Notify('mode')
+    def set_mode(self, mode):
+        self._mode = mode
+        logging.debug(mode)
+
+    mode = property(get_mode, set_mode)
+
+    def commandline_edited(self, text):
+        if self.mode == SEARCH_MODE:
+            self.currentTab().current.search(text)
+
+    def do_keyevent(self, key, modifiers):
+        if self.mode == NORMAL_MODE:
+            keymap.do_keymap(keymap.normal_map,
+                    keymap.Key(key, modifiers))
+            return True
+        elif self.mode == COMMAND_MODE:
+            return keymap.do_keymap(keymap.command_map,
+                    keymap.Key(key, modifiers))
+        elif self.mode == SEARCH_MODE:
+            return keymap.do_keymap(keymap.search_map,
+                    keymap.Key(key, modifiers))
+        else:
+            return False
 
     def tabnew(self):
         self.addTab(TwoScreenFilerViewModel())

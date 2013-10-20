@@ -8,6 +8,7 @@ from PyQt4.QtCore import Qt
 import PyQt4.QtGui as QtGui
 from filerview import TabViewModel
 from filerview import Subject
+import filerview
 import command
 import lispy
 import os.path
@@ -59,6 +60,7 @@ class FilerWidget(QtGui.QWidget):
         panel_layout = QtGui.QVBoxLayout()
         self.setLayout(panel_layout)
         panel_layout.setContentsMargins(0, 0, 0, 0)
+        panel_layout.setSpacing(0)
 
         self.cwdline = QtGui.QLineEdit()
         self.cwdline.setEnabled(False)
@@ -88,7 +90,7 @@ class FilerWidget(QtGui.QWidget):
                     color = QtGui.QColor(150, 150, 0)
                     val = '*'
                 else:
-                    color = QtGui.QColor(0, 0, 0)
+                    color = QtGui.QColor(255, 255, 255)
                     val = ' '
                 for j, col in enumerate(horizontal_header):
                     if col == 's':
@@ -132,32 +134,14 @@ class FilerWidget(QtGui.QWidget):
 
 class KeyPressEater(QtCore.QObject):
 
-    commandModeChanged = QtCore.pyqtSignal(bool)
-
-    def __init__(self):
+    def __init__(self, viewmodel):
         QtCore.QObject.__init__(self)
-        self._commandMode = False
-
-    @QtCore.pyqtSlot(str)
-    def doCommand(self, cmd):
-        do_command('(' + cmd + ')')
-        self.setCommandMode(False)
-
-    @QtCore.pyqtSlot(bool)
-    def setCommandMode(self, focussed):
-        self._commandMode = focussed
-        self.commandModeChanged.emit(self._commandMode)
+        self.viewmodel = viewmodel
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.KeyPress:
-            if not self._commandMode:
-                if event.key() == Qt.Key_Semicolon:
-                    self.setCommandMode(True)
-                    return True
-                else:
-                    keymap.do_keymap(keymap.normal_map,
-                            keymap.Key(event.key(), event.modifiers()))
-                    return True
+            if self.viewmodel.do_keyevent(event.key(), event.modifiers()):
+                return True
             else:
                 return QtCore.QObject.eventFilter(self, obj, event)
         else:
@@ -173,28 +157,11 @@ class TwoScreenFilerWidget(QtGui.QWidget):
 
     def update(self, viewmodel, event):
         self.views[viewmodel.focus].tablewidget.setFocus(Qt.OtherFocusReason)
-        focusedColor = Qt.darkGreen
-        elseColor = Qt.gray
-        if viewmodel.focus == viewmodel.FocusLeft:
-            p = self.leftWidget.tablewidget.palette()
-            p.setColor(QtGui.QPalette.Highlight, focusedColor)
-            self.leftWidget.tablewidget.setPalette(p)
-
-            p = self.rightWidget.tablewidget.palette()
-            p.setColor(QtGui.QPalette.Highlight, elseColor)
-            self.rightWidget.tablewidget.setPalette(p)
-        else:
-            p = self.leftWidget.tablewidget.palette()
-            p.setColor(QtGui.QPalette.Highlight, elseColor)
-            self.leftWidget.tablewidget.setPalette(p)
-
-            p = self.rightWidget.tablewidget.palette()
-            p.setColor(QtGui.QPalette.Highlight, focusedColor)
-            self.rightWidget.tablewidget.setPalette(p)
 
     def setup_ui(self, viewmodel):
         panel_layout = QtGui.QHBoxLayout()
         panel_layout.setContentsMargins(0, 0, 0, 0)
+        panel_layout.setSpacing(0)
         self.setLayout(panel_layout)
 
         self.leftWidget = FilerWidget(viewmodel.left)
@@ -238,53 +205,45 @@ class LogWidet(QtGui.QPlainTextEdit):
 
 
 class CommandLineWidget(QtGui.QLineEdit):
-    focussed = QtCore.pyqtSignal(bool)
-    commandEditingFinished = QtCore.pyqtSignal(str)
-
-    def __init__(self, parent=None):
+    def __init__(self, viewmodel, parent=None):
         QtGui.QLineEdit.__init__(self, parent=parent)
-        self.returnPressed.connect(self.emitCommandEditingFinished)
+        self.textEdited.connect(self.text_edited)
+        self.viewmodel = viewmodel
+        viewmodel.attach(self)
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
-            self.clearFocus()
-        else:
-            QtGui.QLineEdit.keyPressEvent(self, event)
+    def update(self, model, event):
+        if event.kind == 'mode':
+            if model.mode == filerview.COMMAND_MODE:
+                self.setFocus(Qt.OtherFocusReason)
+            elif model.mode == filerview.SEARCH_MODE:
+                self.setFocus(Qt.OtherFocusReason)
+            else:
+                self.clear()
+                self.clearFocus()
 
-    @QtCore.pyqtSlot(bool)
-    def setFocusForSlot(self, isfocuss):
-        if isfocuss:
-            self.setFocus(Qt.OtherFocusReason)
-        else:
-            self.clearFocus()
-
-    @QtCore.pyqtSlot()
-    def emitCommandEditingFinished(self):
-        self.commandEditingFinished.emit(self.text())
-
-    def focusInEvent(self, e):
-        self.focussed.emit(True)
-
-    def focusOutEvent(self, e):
-        self.focussed.emit(False)
-        self.clear()
-
+    @QtCore.pyqtSlot(str)
+    def text_edited(self, fstr):
+        self.viewmodel.commandline_edited(fstr)
 
 class CentralWidget(QtGui.QWidget):
     def __init__(self, viewmodel, eventfilter, parent=None):
         QtGui.QWidget.__init__(self, parent=parent)
         self.setup_ui(viewmodel)
-        self.commandLine.focussed.connect(eventfilter.setCommandMode)
-        self.commandLine.commandEditingFinished.connect(eventfilter.doCommand)
-        eventfilter.commandModeChanged.connect(self.commandLine.setFocusForSlot)
+        viewmodel.attach(self)
+        self.viewmodel = viewmodel
 
-    @QtCore.pyqtSlot(bool)
-    def commandlog(self, focussed):
-        logging.debug("focus " + str(focussed))
+    @QtCore.pyqtProperty(str)
+    def mode(self):
+        return self.viewmodel.mode
+
+    def update(self, viewmodel, event):
+        if event.kind == 'mode':
+            self.modeLable.setText(viewmodel.mode.upper())
 
     def setup_ui(self, viewmodel):
         panel = QtGui.QVBoxLayout()
         panel.setContentsMargins(0, 0, 0, 0)
+        panel.setSpacing(0)
         self.setLayout(panel)
 
         tab = TabWidget(viewmodel)
@@ -296,21 +255,12 @@ class CentralWidget(QtGui.QWidget):
 
         panel2 = QtGui.QHBoxLayout()
         panel2.setContentsMargins(0, 0, 0, 0)
-        self.commandLabel = QtGui.QLabel("hogehoge")
-
-        self.commandLabel.setStyleSheet("""
-        QLabel {
-            background-color: darkmagenta;
-            color: white;
-            font: bold;
-            margin: 0px;
-        }""")
-
-        self.commandLine = CommandLineWidget()
-        panel2.addWidget(self.commandLabel)
+        panel2.setSpacing(0)
+        self.modeLable = QtGui.QLabel(viewmodel.mode.upper())
+        self.commandLine = CommandLineWidget(viewmodel)
+        panel2.addWidget(self.modeLable)
         panel2.addWidget(self.commandLine)
         panel.addLayout(panel2)
-        self.commandLine.focussed.connect(self.commandlog)
 
 
 class TabWidget(QtGui.QTabWidget):
@@ -357,15 +307,28 @@ class View(QtCore.QObject):
     def __init__(self, model):
         QtCore.QObject.__init__(self)
         self.app = QtGui.QApplication(sys.argv)
-        self.kpe = KeyPressEater()
+        self.kpe = KeyPressEater(model)
         self.app.installEventFilter(self.kpe)
-
         self.main_window = QtGui.QMainWindow()
 
-        cw = CentralWidget(model, self.kpe)
-        self.main_window.setCentralWidget(cw)
+        self.cw = CentralWidget(model, self.kpe)
+        self.main_window.setCentralWidget(self.cw)
+        self.load_stylesheet()
+
+        model.attach(self)
 
         self.main_window.show()
+
+    def update(self, model, event):
+        if event.kind == 'mode':
+            self.load_stylesheet()
+
+    def set_style(self, style):
+        self.app.setStyle(style)
+
+    def load_stylesheet(self):
+        with open('style.qss') as qss:
+            self.app.setStyleSheet(qss.read())
 
     def set_window_title(self, title):
         self.main_window.setWindowTitle(title)
@@ -385,15 +348,6 @@ class View(QtCore.QObject):
     def mainloop(self):
         self.app.exec_()
 
-def do_command(cmd):
-    logging.debug(cmd)
-    try:
-        val = lispy.eval(lispy.parse(cmd))
-        if val is not None:
-            logging.info(lispy.to_string(val))
-    except Exception as e:
-        logging.exception(e)
-    return True
 
 def main():
     model = TabViewModel()

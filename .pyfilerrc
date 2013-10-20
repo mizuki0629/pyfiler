@@ -73,6 +73,7 @@
 (define (pain-other)
   ($attr other (tabcurrent)))
 
+
 ; platform {{{
 ($import platform)
 (define (platform? str)
@@ -92,8 +93,7 @@
 
 ; tab {{{
 (define (tabnew)
-  ($mcall tabnew filer-model))
-(define (tabclose)
+  ($mcall tabnew filer-model)) (define (tabclose)
   ($mcall removeTab filer-model ($attr currentIndex filer-model)))
 (define (tabnext)
   ($mcall nextTab filer-model))
@@ -113,6 +113,8 @@
   ($mcall reload_commands filer-model))
 (define (reload-pain)
   ($mcall reload (pain-current)))
+(define (reload-stylesheet)
+  ($mcall load_stylesheet filer-view))
 
 ; cursor {{{
 (define (cursor-first)
@@ -155,8 +157,36 @@
 
 (define (set-window-title title)
   ($mcall set_window_title filer-view title))
+
+(define (set-style style)
+  ($mcall set_style filer-view style))
 ; }}}
 
+(define (normal-mode)
+  ($mcall set_mode filer-model "normal"))
+(define (command-mode)
+  ($mcall set_mode filer-model "command"))
+(define (search-mode)
+  ($mcall set_mode filer-model "search"))
+
+(define (search-name fstr)
+  ($mcall search  (pain-current) fstr))
+(define (search-next)
+  ($mcall search  (pain-current)))
+(define (search-prev)
+  ($mcall rsearch  (pain-current)))
+(define (search-cancel)
+  ($mcall search_cancel (pain-current))
+  (normal-mode))
+($import command)
+(define (do-command)
+  ($call/mod command do_command
+			 (+ (+ "(" ($mcall text ($attr commandLine ($attr cw filer-view)))) ")"))
+  (normal-mode))
+(define (search-enter)
+  ($mcall search_enter (pain-current)
+		  ($mcall text ($attr commandLine ($attr cw filer-view))))
+  (normal-mode))
 ; }}}
 
 
@@ -167,6 +197,7 @@
 
 (set-window-size 1100 600)
 (set-window-title "pyfiler")
+(set-style "Cleanlooks")
 
 ; define-key {{{
 (define-key normal-map "d" 'tabclose)
@@ -185,10 +216,20 @@
 (define-key normal-map "a" 'select-all)
 (define-key normal-map "S-g" 'cursor-last)
 (define-key normal-map "S-r" 'reload-config)
+(define-key normal-map "C-r" 'reload-stylesheet)
 (define-key normal-map "S-Space" 'select-up)
 (define-key normal-map "Space" 'select-down)
 (define-key normal-map "Tab" 'change-pain)
-(define-key normal-map "S-Return" 'open-assoc)
+(define-key normal-map "Return" 'open-assoc)
 (define-key normal-map "S-h" 'popd)
+(define-key normal-map "Semicolon" 'command-mode)
+(define-key normal-map "Slash" 'search-mode)
+(define-key normal-map "n" 'search-next)
+(define-key normal-map "S-n" 'search-prev)
+
+(define-key search-map  "Return" 'search-enter)
+(define-key search-map "Escape" 'search-cancel)
+(define-key command-map "Return" 'do-command)
+(define-key command-map "Escape" 'normal-mode)
 ;}}}
 ;}}}

@@ -1,5 +1,7 @@
 import lispy
 import keymap
+import logging
+import filerview
 
 
 def Command(func):
@@ -41,6 +43,16 @@ def init(v, m):
     view, model = v, m
     lispy.global_env.update({'filer-view': view})
     lispy.global_env.update({'filer-model': model})
+
+def do_command(cmd):
+    logging.debug(cmd)
+    try:
+        val = lispy.eval(lispy.parse(cmd))
+        if val is not None:
+            logging.info(lispy.to_string(val))
+    except Exception as e:
+        logging.exception(e)
+    return True
 
 # python - lispy binding
 @Command_

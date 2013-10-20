@@ -8,8 +8,10 @@ from PyQt4.QtCore import Qt
 
 normal_map = {}
 lispy.global_env.update({'normal-map':normal_map})
-command_map = {"hoge":1}
-lispy.global_env.update({'command-map':command_map })
+command_map = {}
+lispy.global_env.update({'command-map':command_map})
+search_map = {}
+lispy.global_env.update({'search-map':search_map})
 
 # 文字列->Qtの値変換Map{{{
 _qt_keymap = {
@@ -481,7 +483,7 @@ def parse(keystr):
     return Key(key, modifiers)
 
 def do_keymap(kmap, key):
-    symbol = get_symbol(kmap, key)
+    symbol = kmap.get(key)
     if symbol is not None:
         logging.debug('(' + lispy.to_string(symbol) + ')')
         lispy.eval([symbol])

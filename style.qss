@@ -1,0 +1,65 @@
+CentralWidget {
+	background-color: rgb(34, 34, 34);
+	color: rgb(34, 34, 34);
+}
+
+CentralWidget > QLabel {
+	margin: 1px;
+}
+
+CentralWidget[mode="normal"] > QLabel {
+	background-color: blue;
+	color: white;
+}
+
+CentralWidget[mode="command"] > QLabel {
+	background-color: darkmagenta;
+	color: white;
+}
+
+FilerWidget > QLineEdit {
+	color: white;
+	background-color: rgb(34, 34, 34);
+	margin: 1px;
+}
+
+QHeaderView {
+	color: white;
+	background-color: rgb(34, 34, 34);
+	border: 0px solid white;
+	border-bottom: 3px double white;
+}
+
+FilerWidget > QTableWidget {
+	color: white;
+	background-color: rgb(34, 34, 34);
+	selection-background-color: grey;
+	selection-color: white;
+	border: 1px solid black;
+	margin: 1px;
+}
+
+FilerWidget > QTableWidget:focus {
+	selection-background-color: lime;
+	selection-color: lime;
+	border-color: lime;
+}
+
+CommandLineWidget {
+	color: white;
+	background-color: rgb(34, 34, 34);
+	border-width: 1px;
+	border-style: solid;
+	margin: 1px;
+}
+CommandLineWidget:focus {
+	border: 1px solid lime;
+}
+
+LogWidet {
+	background-color: rgb(34, 34, 34);
+	color: white;
+	border-width: 1px;
+	margin: 1px;
+}
+

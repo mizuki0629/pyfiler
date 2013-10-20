@@ -59,10 +59,12 @@ class BaseFiler(object):
 
     def open_assoc(self, path):
         abspath = self._abspath(path)
-        logging.debug(abspath)
-        subprocess.Popen([abspath], shell=True )
+        if 'Windows' == platform.system():
+            subprocess.Popen([abspath], shell=True )
+        elif 'Darwin' == platform.system():
+            subprocess.Popen(['open', abspath])
 
-    def chdir_or_execute(self, path):
+    def chdir(self, path):
         abspath = self._abspath(path)
         if os.path.isdir(abspath):
             self.cwd_history.append(self._cwd)
@@ -79,15 +81,6 @@ class BaseFiler(object):
                 self._cwd = shortcut.Targetpath
                 return self._cwd
 
-
-    def chdir(self, path):
-        abspath = self._abspath(path)
-        if os.path.isdir(abspath):
-            self.cwd_history.append(self._cwd)
-            self._cwd = abspath
-            return self._cwd
-        else:
-            raise IOError()
 
     def popd(self):
         if len(self.cwd_history) > 0:

@@ -1,7 +1,6 @@
 import lispy
 import keymap
 import logging
-import filerview
 
 
 def Command(func):

@@ -6,13 +6,10 @@ import sys
 import PyQt4.QtCore as QtCore
 from PyQt4.QtCore import Qt
 import PyQt4.QtGui as QtGui
-from filerview import TabViewModel
-from filerview import Subject
-import filerview
+from model import TabViewModel, Subject, COMMAND_MODE, SEARCH_MODE
 import command
 import lispy
 import os.path
-import keymap
 
 # TODO まとめる
 horizontal_header = ['s', 'filename', 'filemode', 'st_ctime', 'st_size', ]
@@ -213,9 +210,9 @@ class CommandLineWidget(QtGui.QLineEdit):
 
     def update(self, model, event):
         if event.kind == 'mode':
-            if model.mode == filerview.COMMAND_MODE:
+            if model.mode == COMMAND_MODE:
                 self.setFocus(Qt.OtherFocusReason)
-            elif model.mode == filerview.SEARCH_MODE:
+            elif model.mode == SEARCH_MODE:
                 self.setFocus(Qt.OtherFocusReason)
             else:
                 self.clear()

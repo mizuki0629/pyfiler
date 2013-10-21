@@ -134,8 +134,10 @@ class FilerViewModel(Subject):
 
     @Notify('chdir')
     @Reload
-    def chdir(self):
-        self.filer.chdir(self.cursor_file_abspath)
+    def chdir(self, path=None):
+        if path is None:
+            path = self.cursor_file_abspath
+        self.filer.chdir(path)
 
     def cwd(self):
         return self.filer.cwd

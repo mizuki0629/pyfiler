@@ -8,6 +8,11 @@
 (define caar (lambda (x) (car (car x))))
 (define cddr (lambda (x) (cdr (cdr x))))
 
+(define-macro let*
+  (lambda (args . body) 
+    (if (null? (cdr args))
+        `(let (,(car args)) ,@body)
+      `(let (,(car args)) (let* ,(cdr args) ,@body)))))
 
 (define-macro cond
   (lambda args
@@ -129,8 +134,10 @@
 
 (define (change-pain)
   ($mcall change_focus (tabcurrent)))
-(define (cd)
+(define (cd-cursor)
   ($mcall chdir (pain-current)))
+(define (cd path)
+  ($mcall chdir (pain-current) path))
 (define (open-assoc)
   ($mcall open_assoc (pain-current)))
 (define (cd-parent)
@@ -205,7 +212,7 @@
 (define-key normal-map "h" 'cd-parent)
 (define-key normal-map "j" 'cursor-down)
 (define-key normal-map "k" 'cursor-up)
-(define-key normal-map "l" 'cd)
+(define-key normal-map "l" 'cd-cursor)
 (define-key normal-map "C-l" 'tabnext)
 (define-key normal-map "C-h" 'tabprev)
 (define-key normal-map "r" 'reload-pain)
@@ -233,3 +240,49 @@
 (define-key command-map "Escape" 'normal-mode)
 ;}}}
 ;}}}
+
+(define favorite-list
+  '(
+	("中古車" "C:\\Documents and Settings\\mhirota7\\My Documents\\中古車")
+	("hoge" "C:\\Documents and Settings\\mhirota7\\My Documents\\中古車")
+	))
+
+; logging {{{
+($import logging)
+(define (log-debug str)
+	($call/mod logging debug str))
+(define (log-info str)
+	($call/mod logging info str))
+; }}}
+
+($import subprocess)
+(define sh
+  (lambda args
+	($call/mod subprocess call args)))
+
+(define (str val)
+  ($call str val))
+
+(define (favorites)
+  (define (iter lis a)
+	(cond ((null? lis) nil)
+		  (else
+			(log-debug (+ (+ (str a) " ") (str (car lis))))
+			(iter (cdr lis) (+ a 1)))))
+  (iter favorite-list 1))
+
+(define (fav n)
+  (define (iter lis c)
+	(if (null? lis) nil
+	  (if (equal? n c) (cd (car (cdar lis)))
+		(iter (cdr lis) (+ c 1)))))
+  (iter favorite-list 1))
+
+(define (favorite name)
+  (define (iter lis)
+	(if (null? lis) nil
+	  (let ((item (car lis)))
+		(if (equal? (car item) name)
+		  (cd (cadr item))
+		  (iter (cdr lis))))))
+  (iter favorite-list))

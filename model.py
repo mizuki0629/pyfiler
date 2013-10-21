@@ -41,7 +41,7 @@ def Notify(kind):
     return notify_decorator
 
 
-class FileViewModel(object):
+class File(object):
     def __init__(self, state):
         self.state = state
         self.isselect = False
@@ -49,12 +49,13 @@ class FileViewModel(object):
     def __repr__(self):
         return self.filename + ' : ' + str(self.isselect)
 
+# TODO 使わないなら捨てること
 def nop_filter(*args, **kwargs):
     def filter_imp(file):
         return True
     return filter_imp
 
-class FilerViewModel(Subject):
+class Pain(Subject):
     def __init__(self, filer=BaseFiler):
         Subject.__init__(self)
         self.filter = nop_filter
@@ -63,6 +64,7 @@ class FilerViewModel(Subject):
         self.files = []
         self.cursor = 0
         self.reload()
+        # TODO painに依存しないようにすること
         self.cursor_bak = None
         self.search_str = None
 
@@ -81,7 +83,7 @@ class FilerViewModel(Subject):
         def reload_after_original_function(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
             self.cursor = 0
-            ls = [FileViewModel(state) for state in self.filer.ls()]
+            ls = [File(state) for state in self.filer.ls()]
             if isinstance(self.filter, lispy.Procedure):
                 self.files = lispy.eval([
                     lispy.Symbol('filter'),
@@ -89,7 +91,7 @@ class FilerViewModel(Subject):
                     [lispy._quote, ls]
                     ])
             else:
-                self.files = list(filter(self.filter, [FileViewModel(state) for state in self.filer.ls()]))
+                self.files = list(filter(self.filter, [File(state) for state in self.filer.ls()]))
             return result
         return reload_after_original_function
 
@@ -221,7 +223,7 @@ class FilerViewModel(Subject):
         self.search_str = sstr
 
 
-class TwoScreenFilerViewModel(Subject):
+class Tab(Subject):
     FocusLeft = 0
     FocusRight = 1
 
@@ -238,8 +240,8 @@ class TwoScreenFilerViewModel(Subject):
 
     other = property(lambda self: self.right if self.focus == self.FocusLeft else self.left)
 
-    def __init__(self, view_left=FilerViewModel,
-                 view_right=FilerViewModel):
+    def __init__(self, view_left=Pain,
+                 view_right=Pain):
         Subject.__init__(self)
         self.views = (view_left(), view_right())
         self.left.attach(self)
@@ -283,13 +285,14 @@ class TwoScreenFilerViewModel(Subject):
 NORMAL_MODE = 'normal'
 COMMAND_MODE = 'command'
 SEARCH_MODE = 'search'
+SH_MODE = 'sh'
 
-class TabViewModel(Subject):
+class Model(Subject):
     def __init__(self):
         Subject.__init__(self)
         self.tabs = []
         self.currentIndex = 0
-        self.addTab(TwoScreenFilerViewModel())
+        self.addTab(Tab())
         self.mode = NORMAL_MODE
 
     def get_mode(self):
@@ -317,11 +320,14 @@ class TabViewModel(Subject):
         elif self.mode == SEARCH_MODE:
             return keymap.do_keymap(keymap.search_map,
                     keymap.Key(key, modifiers))
+        elif self.mode == SH_MODE:
+            return keymap.do_keymap(keymap.sh_map,
+                    keymap.Key(key, modifiers))
         else:
             return False
 
     def tabnew(self):
-        self.addTab(TwoScreenFilerViewModel())
+        self.addTab(Tab())
 
     @Notify('add')
     def addTab(self, filervm):
@@ -362,7 +368,7 @@ class TabViewModel(Subject):
 
 
 def main():
-    fview = FilerViewModel()
+    fview = Pain()
     fview._toggle_isselet(0)
     fview.toggle_isselect_all()
 

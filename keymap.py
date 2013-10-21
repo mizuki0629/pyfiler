@@ -10,6 +10,8 @@ normal_map = {}
 lispy.global_env.update({'normal-map':normal_map})
 command_map = {}
 lispy.global_env.update({'command-map':command_map})
+sh_map = {}
+lispy.global_env.update({'sh-map':sh_map})
 search_map = {}
 lispy.global_env.update({'search-map':search_map})
 

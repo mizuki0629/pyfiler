@@ -6,7 +6,7 @@ import sys
 import PyQt4.QtCore as QtCore
 from PyQt4.QtCore import Qt
 import PyQt4.QtGui as QtGui
-from model import TabViewModel, Subject, COMMAND_MODE, SEARCH_MODE
+from model import Model, Subject, COMMAND_MODE, SEARCH_MODE, SH_MODE
 import command
 import lispy
 import os.path
@@ -214,6 +214,8 @@ class CommandLineWidget(QtGui.QLineEdit):
                 self.setFocus(Qt.OtherFocusReason)
             elif model.mode == SEARCH_MODE:
                 self.setFocus(Qt.OtherFocusReason)
+            elif model.mode == SH_MODE:
+                self.setFocus(Qt.OtherFocusReason)
             else:
                 self.clear()
                 self.clearFocus()
@@ -347,7 +349,7 @@ class View(QtCore.QObject):
 
 
 def main():
-    model = TabViewModel()
+    model = Model()
     view = View(model)
     command.init(view, model)
     view.load_config()

@@ -1,6 +1,7 @@
 import lispy
 import keymap
 import logging
+import subprocess
 
 
 def Command(func):
@@ -78,6 +79,10 @@ def py_import(modname):
 def py_class(modname, classname):
     return getattr(globals()[modname], classname)
 
+
+@Command_
+def sh_call(cwd, args):
+    return subprocess.call(args, cwd=cwd)
 
 
 # TODO 以下　lisp置き換え

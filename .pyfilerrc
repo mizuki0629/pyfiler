@@ -173,6 +173,8 @@
   ($mcall set_mode filer-model "normal"))
 (define (command-mode)
   ($mcall set_mode filer-model "command"))
+(define (sh-mode)
+  ($mcall set_mode filer-model "sh"))
 (define (search-mode)
   ($mcall set_mode filer-model "search"))
 
@@ -185,14 +187,19 @@
 (define (search-cancel)
   ($mcall search_cancel (pain-current))
   (normal-mode))
+
+(define (commandline-text)
+  ($mcall text ($attr commandLine ($attr cw filer-view))))
+(define (set-commandline-text text)
+  ($mcall setText ($attr commandLine ($attr cw filer-view)) text))
+
 ($import command)
 (define (do-command)
   ($call/mod command do_command
-			 (+ (+ "(" ($mcall text ($attr commandLine ($attr cw filer-view)))) ")"))
+			 (+ (+ "(" (commandline-text)) ")"))
   (normal-mode))
 (define (search-enter)
-  ($mcall search_enter (pain-current)
-		  ($mcall text ($attr commandLine ($attr cw filer-view))))
+  ($mcall search_enter (pain-current) (commandline-text))
   (normal-mode))
 ; }}}
 
@@ -230,22 +237,21 @@
 (define-key normal-map "Return" 'open-assoc)
 (define-key normal-map "S-h" 'popd)
 (define-key normal-map "Semicolon" 'command-mode)
+(define-key normal-map "C-Semicolon" 'sh-mode)
 (define-key normal-map "Slash" 'search-mode)
 (define-key normal-map "n" 'search-next)
 (define-key normal-map "S-n" 'search-prev)
+(define-key normal-map "S-j" 'cd-favorite)
+(define-key normal-map "n" 'mkdir-command)
 
 (define-key search-map  "Return" 'search-enter)
 (define-key search-map "Escape" 'search-cancel)
 (define-key command-map "Return" 'do-command)
 (define-key command-map "Escape" 'normal-mode)
+(define-key sh-map "Escape" 'normal-mode)
+(define-key sh-map "Return" 'do-sh)
 ;}}}
 ;}}}
-
-(define favorite-list
-  '(
-	("中古車" "C:\\Documents and Settings\\mhirota7\\My Documents\\中古車")
-	("hoge" "C:\\Documents and Settings\\mhirota7\\My Documents\\中古車")
-	))
 
 ; logging {{{
 ($import logging)
@@ -255,34 +261,19 @@
 	($call/mod logging info str))
 ; }}}
 
-($import subprocess)
-(define sh
+(define-macro sh
   (lambda args
-	($call/mod subprocess call args)))
+	`(sh-call ,(pwd) (quote ,args))))
+(define (do-sh)
+  ($call/mod command do_command
+			 (+ (+ "(sh " (commandline-text)) ")"))
+  (normal-mode))
 
 (define (str val)
   ($call str val))
-
-(define (favorites)
-  (define (iter lis a)
-	(cond ((null? lis) nil)
-		  (else
-			(log-debug (+ (+ (str a) " ") (str (car lis))))
-			(iter (cdr lis) (+ a 1)))))
-  (iter favorite-list 1))
-
-(define (fav n)
-  (define (iter lis c)
-	(if (null? lis) nil
-	  (if (equal? n c) (cd (car (cdar lis)))
-		(iter (cdr lis) (+ c 1)))))
-  (iter favorite-list 1))
-
-(define (favorite name)
-  (define (iter lis)
-	(if (null? lis) nil
-	  (let ((item (car lis)))
-		(if (equal? (car item) name)
-		  (cd (cadr item))
-		  (iter (cdr lis))))))
-  (iter favorite-list))
+(define favorite-path "~/.pyfiler/favorite")
+(define (cd-favorite)
+  (cd favorite-path))
+(define (mkdir-command)
+  (sh-mode)
+  (set-commandline-text "mkdir "))

@@ -43,6 +43,28 @@
 		 (cons (car ls) (filter predicate (cdr ls))))
 		(else
 		  (filter predicate (cdr ls)))))
+
+; マッピング
+(define map
+  (lambda (fn ls)
+    (if (null? ls)
+        '()
+      (cons (fn (car ls)) (map fn (cdr ls))))))
+
+(define map-2
+  (lambda (fn xs ys)
+    (if (null? xs)
+        '()
+      (cons (fn (car xs) (car ys)) (map-2 fn (cdr xs) (cdr ys))))))
+
+; フィルター
+(define filter
+  (lambda (fn ls)
+    (if (null? ls)
+        '()
+      (if (fn (car ls))
+          (cons (car ls) (filter fn (cdr ls)))
+        (filter fn (cdr ls))))))
 ;}}}
 
 ; python binding macro {{{
@@ -203,10 +225,9 @@
   (normal-mode))
 ; }}}
 
-
 ; === 設定 === {{{
 (cond
-  ((windows?) (set-default-font "tahoma" 10))
+  ((windows?) (set-default-font "Migu 1M" 9))
   ((mac?) (set-default-font "Monaco")))
 
 (set-window-size 1100 600)
@@ -242,7 +263,8 @@
 (define-key normal-map "n" 'search-next)
 (define-key normal-map "S-n" 'search-prev)
 (define-key normal-map "S-j" 'cd-favorite)
-(define-key normal-map "n" 'mkdir-command)
+(define-key normal-map "C-n" 'mkdir-command)
+(define-key normal-map "e" 'open-editor)
 
 (define-key search-map  "Return" 'search-enter)
 (define-key search-map "Escape" 'search-cancel)
@@ -271,9 +293,39 @@
 
 (define (str val)
   ($call str val))
-(define favorite-path "~/.pyfiler/favorite")
+(define favorite-path "c:/Users/mhirota7/.pyfiler/favorite")
 (define (cd-favorite)
   (cd favorite-path))
 (define (mkdir-command)
   (sh-mode)
   (set-commandline-text "mkdir "))
+
+; editor {{{
+(define editor
+  (cond
+	((windows?) '("C:\Program Files\vim74-kaoriya-win32\gvim.exe" "-p" "--remote-tab-silent"))
+	((mac?) '("vi"))))
+(define (open-editor)
+  (sh-popen (pwd) (append editor (list (file-name (cursor-file))))))
+; }}}
+
+; file 関数{{{
+(define (file-state st file)
+  ($mcall get ($attr state file) st))
+(define (cursor-file)
+  ($mcall get_cursor_file (pain-current)))
+(define (file-name file)
+  (file-state "filename" file))
+(define (files)
+  ($attr files (pain-current)))
+(define (select-file? file)
+  ($attr isselect  file))
+(define (select-files)
+  (filter select-file? (files)))
+(define (select-or-cursor-files)
+  (if (null? (select-files))
+	(list (cursor-file))
+	(select-files)))
+;}}}
+
+

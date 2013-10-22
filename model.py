@@ -47,7 +47,7 @@ class File(object):
         self.isselect = False
 
     def __repr__(self):
-        return self.filename + ' : ' + str(self.isselect)
+        return self.state['filename'] + ' : ' + str(self.isselect)
 
 # TODO 使わないなら捨てること
 def nop_filter(*args, **kwargs):
@@ -76,13 +76,15 @@ class Pain(Subject):
         if self.cursor < len(self.files) - 1:
             self.cursor = self.cursor + 1
 
+    def get_cursor_file(self):
+        return self.files[self.cursor]
+
     cursor_file = property(lambda self: self.files[self.cursor])
     cursor_file_abspath = property(lambda self: self.cursor_file.state['abspath'])
 
     def Reload(func):
         def reload_after_original_function(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
-            self.cursor = 0
             ls = [File(state) for state in self.filer.ls()]
             if isinstance(self.filter, lispy.Procedure):
                 self.files = lispy.eval([
@@ -92,6 +94,7 @@ class Pain(Subject):
                     ])
             else:
                 self.files = list(filter(self.filter, [File(state) for state in self.filer.ls()]))
+            self.cursor = self.cursor if self.cursor < len(self.files) else len(self.files) - 1
             return result
         return reload_after_original_function
 
@@ -190,7 +193,7 @@ class Pain(Subject):
             self.cursor_bak = self.cursor
 
         for index, f in self.rotate_list(list(enumerate(self.files)), self.cursor_bak+1):
-            if re.search(sstr, f.state['filename']):
+            if re.search(sstr, f.state['filename'], re.IGNORECASE):
                 self.cursor = index
                 return
 

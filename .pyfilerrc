@@ -65,6 +65,13 @@
       (if (fn (car ls))
           (cons (car ls) (filter fn (cdr ls)))
         (filter fn (cdr ls))))))
+
+
+(define (reduce f g ls)
+  (if (null? ls)
+	g
+	(reduce f (f g (car ls)) (cdr ls))))
+
 ;}}}
 
 ; python binding macro {{{
@@ -72,7 +79,7 @@
 	(lambda args
 	  `(py-call-with-module (quote ,(car args)) (quote ,(cadr args)) ,@(cddr args))))
 
-(define-macro $class
+(define-macro $gattr
 	(lambda args
 	  `(py-class (quote ,(car args)) (quote ,(cadr args)))))
 
@@ -92,6 +99,20 @@
 	(lambda args
 	  `(py-import (quote ,(car args)) ,@(cdr args))))
 ;}}}
+
+($import operator)
+(define +
+  (lambda args
+	(reduce ($gattr operator add) (car args) (cdr args))))
+(define -
+  (lambda args
+	(reduce ($gattr operator sub) (car args) (cdr args))))
+(define *
+  (lambda args
+	(reduce ($gattr operator mul) (car args) (cdr args))))
+(define /
+  (lambda args
+	(reduce ($gattr operator truediv) (car args) (cdr args))))
 
 (define (tabcurrent)
   ($mcall currentTab filer-model))
@@ -218,7 +239,7 @@
 ($import command)
 (define (do-command)
   ($call/mod command do_command
-			 (+ (+ "(" (commandline-text)) ")"))
+			 (+ "(" (commandline-text) ")"))
   (normal-mode))
 (define (search-enter)
   ($mcall search_enter (pain-current) (commandline-text))
@@ -288,12 +309,12 @@
 	`(sh-call ,(pwd) (quote ,args))))
 (define (do-sh)
   ($call/mod command do_command
-			 (+ (+ "(sh " (commandline-text)) ")"))
+			 (+ "(sh " (commandline-text) ")"))
   (normal-mode))
 
 (define (str val)
   ($call str val))
-(define favorite-path "c:/Users/mhirota7/.pyfiler/favorite")
+(define favorite-path "~/.pyfiler/favorite")
 (define (cd-favorite)
   (cd favorite-path))
 (define (mkdir-command)
@@ -301,12 +322,12 @@
   (set-commandline-text "mkdir "))
 
 ; editor {{{
-(define editor
+(define *editor*
   (cond
 	((windows?) '("C:\Program Files\vim74-kaoriya-win32\gvim.exe" "-p" "--remote-tab-silent"))
-	((mac?) '("vi"))))
+	((mac?) '("open" "-a" "MacVim"))))
 (define (open-editor)
-  (sh-popen (pwd) (append editor (list (file-name (cursor-file))))))
+  (sh-popen (pwd) (append *editor* (list (file-name (cursor-file))))))
 ; }}}
 
 ; file 関数{{{
@@ -327,5 +348,4 @@
 	(list (cursor-file))
 	(select-files)))
 ;}}}
-
 

@@ -171,6 +171,7 @@ def callcc(proc):
 def add_globals(self):
     "Add some Scheme standard procedures."
     import math, cmath, operator as op
+    import numbers
     self.update(vars(math))
     self.update(vars(cmath))
     self.update({
@@ -180,6 +181,7 @@ def add_globals(self):
      'car':lambda x:x[0], 'cdr':cdr, 'append':op.add,  
      'list':lambda *x:list(x), 'list?': lambda x:isa(x,list),
      'null?':lambda x:x==[], 'symbol?':lambda x: isa(x, Symbol),
+     'string?':lambda x: type(x) == str, 'number?':lambda x: isa(x, numbers.Number),
      'boolean?':lambda x: isa(x, bool), 'pair?':is_pair, 
      'port?': lambda x:isa(x,file), 'apply':lambda proc,l: proc(*l), 
      'eval':lambda x: eval(expand(x)), 'load':lambda fn: load(fn), 'call/cc':callcc,

@@ -2,7 +2,6 @@ import lispy
 import keymap
 import logging
 import subprocess
-import io
 
 
 def Command(func):
@@ -83,9 +82,10 @@ def py_class(modname, classname):
 
 @Command_
 def sh_call(cwd, args):
-    with io.StringIO() as out:
-        ret = subprocess.call(args, stdout=out, cwd=cwd)
-        return out.getvalue()
+    with subprocess.Popen(args, cwd=cwd,
+            stderr=subprocess.PIPE, stdout=subprocess.PIPE) as proc:
+        rcd = proc.wait()
+        return proc.stdout.read()
 
 @Command_
 def sh_popen(cwd, args):

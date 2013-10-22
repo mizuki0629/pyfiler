@@ -22,6 +22,7 @@ class BaseFiler(object):
     cwd = property(get_cwd)
 
     def _abspath(self, path):
+        path = os.path.expandvars(os.path.expanduser(path))
         if os.path.isabs(path):
             return path
         else:
@@ -74,7 +75,6 @@ class BaseFiler(object):
             root, ext = os.path.splitext(path)
             if ext == '.lnk' and 'Windows' == platform.system():
                 import win32com.client
-
                 shell = win32com.client.Dispatch("WScript.Shell")
                 shortcut = shell.CreateShortCut(abspath)
                 self.cwd_history.append(self._cwd)

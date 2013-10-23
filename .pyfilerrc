@@ -9,10 +9,12 @@
 (define cddr (lambda (x) (cdr (cdr x))))
 
 (define-macro let*
-  (lambda (args . body) 
-    (if (null? (cdr args))
-        `(let (,(car args)) ,@body)
-      `(let (,(car args)) (let* ,(cdr args) ,@body)))))
+  (lambda args
+	(let ((ag (car args))
+		 (body (cdr args)))
+	  (if (null? (cdr ag))
+		`(let (,(car ag)) ,@body)
+		`(let (,(car ag)) (let* ,(cdr ag) ,@body))))))
 
 (define-macro cond
   (lambda args
@@ -248,7 +250,7 @@
 
 ; === 設定 === {{{
 (cond
-  ((windows?) (set-default-font "Migu 1M" 9))
+  ((windows?) (set-default-font "Migu 1M" 10))
   ((mac?) (set-default-font "Monaco")))
 
 (set-window-size 1100 600)
@@ -277,6 +279,7 @@
 (define-key normal-map "Space" 'select-down)
 (define-key normal-map "Tab" 'change-pain)
 (define-key normal-map "Return" 'open-assoc)
+(define-key normal-map "S-Return" 'open-my-assoc)
 (define-key normal-map "S-h" 'popd)
 (define-key normal-map "Semicolon" 'command-mode)
 (define-key normal-map "C-Semicolon" 'sh-mode)
@@ -286,6 +289,8 @@
 (define-key normal-map "S-j" 'cd-favorite)
 (define-key normal-map "C-n" 'mkdir-command)
 (define-key normal-map "e" 'open-editor)
+(define-key normal-map "y" 'set-clipboard-filename)
+(define-key normal-map "S-y" 'set-clipboard-filepath)
 
 (define-key search-map  "Return" 'search-enter)
 (define-key search-map "Escape" 'search-cancel)
@@ -321,10 +326,27 @@
   (sh-mode)
   (set-commandline-text "mkdir "))
 
+; 関連付け開く {{{
+(define *my-assoc*
+  '(
+	(".xls" ("C:/Program Files/Microsoft Office/OFFICE11/excel.exe" "/t"))
+	(".doc" ("C:/Program Files/Microsoft Office/OFFICE11/winword.exe" "/f"))
+	))
+($import os.path)
+(define (open-my-assoc)
+  (let* ((filename (file-name (cursor-file)))
+		 (c (assoc
+			  (cadr (($attr splitext ($gattr os.path path)) filename))
+			  *my-assoc*)))
+	(if (not (null? c))
+	  (sh-popen (pwd) (append (cadr c) (list filename)))
+	  nil)))
+; }}}
+
 ; editor {{{
 (define *editor*
   (cond
-	((windows?) '("C:\Program Files\vim74-kaoriya-win32\gvim.exe" "-p" "--remote-tab-silent"))
+	((windows?) '("C:/Program Files/vim74-kaoriya-win32/gvim.exe" "-p" "--remote-tab-silent"))
 	((mac?) '("open" "-a" "MacVim"))))
 (define (open-editor)
   (sh-popen (pwd) (append *editor* (list (file-name (cursor-file))))))
@@ -349,3 +371,19 @@
 	(select-files)))
 ;}}}
 
+; クリップボード {{{
+(define (bind1st func arg1)
+  (lambda args
+	(apply func (cons arg1  args))))
+
+(define (string-join delimiter lis)
+	  (reduce (lambda (x y) (+ x delimiter y)) (car lis) (cdr lis)))
+
+(define (set-clipboard-filename)
+  (set-clipboard
+	  (string-join " " (map file-name (select-or-cursor-files)))))
+
+(define (set-clipboard-filepath)
+  (set-clipboard
+	(string-join " " (map (bind1st file-state "abspath") (select-or-cursor-files)))))
+; }}}

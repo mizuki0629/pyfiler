@@ -61,7 +61,10 @@ class BaseFiler(object):
     def open_assoc(self, path):
         abspath = self._abspath(path)
         if 'Windows' == platform.system():
-            subprocess.Popen([abspath], shell=True )
+            if os.path.isdir(abspath):
+                subprocess.Popen(["explorer", abspath], shell=True )
+            else:
+                subprocess.Popen([abspath], shell=True )
         elif 'Darwin' == platform.system():
             subprocess.Popen(['open', abspath])
 

@@ -2,7 +2,8 @@ import lispy
 import keymap
 import logging
 import subprocess
-
+import tkinter
+import os.path
 
 def Command(func):
     def wrapped(*args):
@@ -105,4 +106,24 @@ def set_filter(func):
 @Command_
 def get_file_state(key, file):
     return file.state[key]
+
+@Command_
+def clipboard():
+    return tkinter.Text().clipboard_get()
+
+@Command_
+def set_clipboard(text_u):
+    tkinter.Text().clipboard_clear()
+    tkinter.Text().clipboard_append(text_u)
+
+@Command_
+def create_shortcut(srcpath, dstpath):
+    import win32com.client
+    srcpath = os.path.expandvars(os.path.expanduser(srcpath))
+    dstpath = os.path.expandvars(os.path.expanduser(dstpath))
+    shell = win32com.client.Dispatch("WScript.Shell")
+    shortcut = shell.CreateShortCut(srcpath)
+    shortcut.Targetpath = dstpath
+    shortcut.Save()
+
 

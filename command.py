@@ -4,6 +4,7 @@ import logging
 import subprocess
 import tkinter
 import os.path
+import platform
 
 def Command(func):
     def wrapped(*args):
@@ -83,8 +84,11 @@ def py_class(modname, classname):
 
 @Command_
 def sh_call(cwd, args):
+    # TODO 判定関数を共通化すること
+    isshell = 'Windows' == platform.system()
+    # TODO windowsﾌときにstdoutの文字コードを変更すること
     with subprocess.Popen(args, cwd=cwd,
-            stderr=subprocess.PIPE, stdout=subprocess.PIPE) as proc:
+            stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=isshell) as proc:
         rcd = proc.wait()
         return proc.stdout.read()
 
@@ -122,8 +126,8 @@ def create_shortcut(srcpath, dstpath):
     srcpath = os.path.expandvars(os.path.expanduser(srcpath))
     dstpath = os.path.expandvars(os.path.expanduser(dstpath))
     shell = win32com.client.Dispatch("WScript.Shell")
-    shortcut = shell.CreateShortCut(srcpath)
-    shortcut.Targetpath = dstpath
+    shortcut = shell.CreateShortCut(dstpath)
+    shortcut.Targetpath = srcpath
     shortcut.Save()
 
 

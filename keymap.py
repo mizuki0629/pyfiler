@@ -485,11 +485,14 @@ def parse(keystr):
     return Key(key, modifiers)
 
 def do_keymap(kmap, key):
-    symbol = kmap.get(key)
-    if symbol is not None:
-        logging.debug('(' + lispy.to_string(symbol) + ')')
-        lispy.eval([symbol])
-        return True
-    else:
-        return False
+    try:
+        symbol = kmap.get(key)
+        if symbol is not None:
+            logging.debug('(' + lispy.to_string(symbol) + ')')
+            lispy.eval([symbol])
+            return True
+        else:
+            return False
+    except Exception as e:
+        logging.exception(e)
 

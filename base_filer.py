@@ -104,6 +104,7 @@ class BaseFiler(object):
         if os.path.exists(os.path.join(abs_dst, os.path.basename(abs_src))):
             raise IOError()
         shutil.move(abs_src, abs_dst)
+        logging.info('move "' + abs_src + '" -> "' + abs_dst + '"')
 
     def copy(self, src, dst):
         abs_src = self._abspath(src)

@@ -86,11 +86,15 @@ def py_class(modname, classname):
 def sh_call(cwd, args):
     # TODO 判定関数を共通化すること
     isshell = 'Windows' == platform.system()
+    if isshell:
+        encoding = 'shift_jis'
+    else:
+        encoding = 'utf-8'
     # TODO windowsﾌときにstdoutの文字コードを変更すること
     with subprocess.Popen(args, cwd=cwd,
             stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=isshell) as proc:
         rcd = proc.wait()
-        return proc.stdout.read()
+        return proc.stdout.read().decode(encoding=encoding)
 
 @Command_
 def sh_popen(cwd, args):

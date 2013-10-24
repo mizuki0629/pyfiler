@@ -56,7 +56,9 @@ class BaseFiler(object):
         return dic
 
     def ls(self):
-        return (self.stat(f) for f in os.listdir(self.cwd))
+        lis = sorted(os.listdir(self.cwd), key=str.lower)
+        lis.insert(0, '..')
+        return (self.stat(f) for f in lis)
 
     def open_assoc(self, path):
         abspath = self._abspath(path)
@@ -99,6 +101,8 @@ class BaseFiler(object):
     def move(self, src, dst):
         abs_src = self._abspath(src)
         abs_dst = self._abspath(dst)
+        if os.path.exists(os.path.join(abs_dst, os.path.basename(abs_src))):
+            raise IOError()
         shutil.move(abs_src, abs_dst)
 
     def copy(self, src, dst):
@@ -120,6 +124,13 @@ class BaseFiler(object):
             shutil.rmtree(abs_path)
         else:
             raise IOError()
+
+    def create_symlink(self, srcpath, dstpath):
+        srcpath = self._abspath(srcpath)
+        dstpath = self._abspath(dstpath)
+        if os.path.isdir(dstpath):
+            dstpath = os.path.join(dstpath, os.path.basename(srcpath))
+        os.symlink(srcpath, dstpath)
 
     def create_shortcut(self, srcpath, dstpath):
         import win32com.client

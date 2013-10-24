@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import logging
+import logging.handlers
 import sys
 import PyQt4.QtCore as QtCore
 from PyQt4.QtCore import Qt
@@ -78,18 +79,27 @@ class FilerWidget(QtGui.QWidget):
 
         self.update(viewmodel, Subject.Event('update'))
 
+    def textcolor(self, file):
+        if file.isselect:
+            return QtGui.QColor(150, 150, 0)
+        # directory
+        elif file.state['filemode'].startswith('d'):
+            return QtGui.QColor(204, 255, 102)
+        elif os.path.islink(file.state['abspath']) or file.state['filename'].endswith('.lnk'):
+            return QtGui.QColor(162, 222, 255)
+        elif file.state['filemode'].endswith('x'):
+            return QtGui.QColor(255, 102, 102)
+        else:
+            return QtGui.QColor(255, 255, 255)
+
     def update(self, viewmodel, event):
         if event.kind == 'cursor':
             self.tablewidget.selectRow(viewmodel.cursor)
         elif event.kind == 'select':
             for i in event.opt['indexes']:
                 # 選択時
-                if viewmodel.files[i].isselect:
-                    color = QtGui.QColor(150, 150, 0)
-                    val = '*'
-                else:
-                    color = QtGui.QColor(255, 255, 255)
-                    val = ' '
+                val = '*' if viewmodel.files[i].isselect else ' '
+                color = self.textcolor(viewmodel.files[i])
                 for j, col in enumerate(horizontal_header):
                     if col == 's':
                         item = QtGui.QTableWidgetItem(val)
@@ -125,11 +135,8 @@ class FilerWidget(QtGui.QWidget):
                             item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
                         else:
                             item = QtGui.QTableWidgetItem(f.state[col])
-                    # 選択時
-                    if f.isselect:
-                        item.setBackgroundColor(QtGui.QColor(255, 255, 0))
-                    if item is not None and f.state['filemode'].startswith('d'):
-                        item.setTextColor(QtGui.QColor(0, 255, 0))
+
+                        item.setTextColor(self.textcolor(f))
                     self.tablewidget.setItem(i, j, item)
             self.tablewidget.selectRow(viewmodel.cursor)
             self.tablewidget.resizeRowsToContents()
@@ -181,23 +188,13 @@ class LogWidet(QtGui.QPlainTextEdit):
         QtGui.QPlainTextEdit.__init__(self, parent=parent)
         self.setReadOnly(True)
 
-        #rootロガーを取得
-        logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
         #出力のフォーマットを定義
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
-
-        #sys.stderrへ出力するハンドラーを定義
-        #sh = logging.StreamHandler()
-        #sh.setLevel(logging.DEBUG)
-        #sh.setFormatter(formatter)
-        #logger.addHandler(sh)
-
+        formatter = logging.Formatter('%(message)s')
         lw = logging.StreamHandler(stream=self)
         lw.terminator = ''
-        lw.setLevel(logging.DEBUG)
+        lw.setLevel(logging.INFO)
         lw.setFormatter(formatter)
-        logger.addHandler(lw)
+        logging.getLogger().addHandler(lw)
 
     def write(self, msg):
         if msg != '':
@@ -358,6 +355,18 @@ class View(QtCore.QObject):
 
 
 def main():
+    #rootロガーを取得
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    #出力のフォーマットを定義
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(filename)s#%(funcName)s(%(lineno)d) - %(message)s')
+
+    #sys.stderrへ出力するハンドラーを定義
+    sh = logging.handlers.TimedRotatingFileHandler('pyfiler.log', when='D', interval=1, backupCount=5)
+    sh.setLevel(logging.DEBUG)
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
+
     model = Model()
     view = View(model)
     command.init(view, model)

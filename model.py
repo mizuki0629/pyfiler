@@ -86,6 +86,7 @@ class Pain(Subject):
         def reload_after_original_function(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
             ls = [File(state) for state in self.filer.ls()]
+            iscd = len(ls) != len(self.files)
             if isinstance(self.filter, lispy.Procedure):
                 self.files = lispy.eval([
                     lispy.Symbol('filter'),
@@ -94,7 +95,11 @@ class Pain(Subject):
                     ])
             else:
                 self.files = list(filter(self.filter, [File(state) for state in self.filer.ls()]))
-            self.cursor = self.cursor if self.cursor < len(self.files) else len(self.files) - 1
+            # TODO カーソルも履歴をとって設定すること
+            if iscd:
+                self.cursor = 0
+            else:
+                self.cursor = self.cursor if self.cursor < len(self.files) else len(self.files) - 1
             return result
         return reload_after_original_function
 

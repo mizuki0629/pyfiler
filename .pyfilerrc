@@ -69,6 +69,13 @@
         (filter fn (cdr ls))))))
 
 
+(define for-each
+  (lambda (fn ls)
+    (if (null? ls) '()
+	  (begin
+		(fn (car ls))
+		(for-each fn (cdr ls))))))
+
 (define (reduce f g ls)
   (if (null? ls)
 	g
@@ -163,6 +170,10 @@
   ($mcall reload_commands filer-model))
 (define (reload-pain)
   ($mcall reload (pain-current)))
+(define (reload-tab)
+  (begin
+	($mcall reload (pain-current))
+	($mcall reload (pain-other))))
 (define (reload-stylesheet)
   ($mcall load_stylesheet filer-view))
 
@@ -297,6 +308,7 @@
 (define-key normal-map "y" 'set-clipboard-filename)
 (define-key normal-map "S-y" 'set-clipboard-filepath)
 (define-key normal-map "S-a" 'favorite-add)
+(define-key normal-map "m" 'move)
 
 (define-key search-map  "Return" 'search-enter)
 (define-key search-map "Escape" 'search-cancel)
@@ -395,6 +407,14 @@
   (set-clipboard
 	(string-join "\n" (map (bind1st file-state "abspath") (select-or-cursor-files)))))
 ; }}}
+; TODO Safeモードを実装すること
+(define (move)
+  (let ((mv ($attr move (filer-current)))
+		(dst (pwd-other)))
+	(for-each (lambda (src) (mv (file-state "abspath" src) dst)) (select-files))
+	(reload-tab)))
 
 (define (favorite-add)
-  ($mcall create_shortcut (filer-current) (file-state "abspath" (cursor-file)) *favorite-path*))
+  (let ((func (cond ((windows?) ($attr create_shortcut (filer-current)))
+					(else ($attr create_symlink (filer-current))))))
+	(func (file-state "abspath" (cursor-file)) *favorite-path*)))

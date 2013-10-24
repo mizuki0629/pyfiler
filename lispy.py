@@ -9,6 +9,7 @@
 import re, sys, io
 import collections
 import logging
+import json
 
 class Symbol(str): pass
 
@@ -86,7 +87,7 @@ def atom(token):
     if token == '#t': return True
     elif token == '#f': return False
     elif token == 'nil': return [_quote, []]
-    elif token[0] == '"': return token[1:-1]
+    elif token[0] == '"': return json.loads(token)
     try: return int(token)
     except ValueError:
         try: return float(token)

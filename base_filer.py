@@ -80,9 +80,10 @@ class BaseFiler(object):
                 import win32com.client
                 shell = win32com.client.Dispatch("WScript.Shell")
                 shortcut = shell.CreateShortCut(abspath)
-                self.cwd_history.append(self._cwd)
-                self._cwd = shortcut.Targetpath
-                return self._cwd
+                if os.path.isdir(shortcut.Targetpath):
+                    self.cwd_history.append(self._cwd)
+                    self._cwd = shortcut.Targetpath
+                    return self._cwd
 
 
     def popd(self):
@@ -120,6 +121,19 @@ class BaseFiler(object):
         else:
             raise IOError()
 
+    def create_shortcut(self, srcpath, dstpath):
+        import win32com.client
+        srcpath = self._abspath(srcpath)
+        dstpath = self._abspath(dstpath)
+        if os.path.isdir(dstpath):
+            dstpath = os.path.join(dstpath, os.path.basename(srcpath))
+        root, ext = os.path.splitext(dstpath)
+        if ext != '.lnk' and not root.endswith('.lnk'):
+            dstpath += '.lnk'
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shortcut = shell.CreateShortCut(dstpath)
+        shortcut.Targetpath = srcpath
+        shortcut.Save()
 
 def main():
     filer = BaseFiler()

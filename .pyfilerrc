@@ -191,10 +191,15 @@
   ($mcall popd (pain-current)))
 (define (pwd)
   ($mcall cwd (pain-current)))
+(define (pwd-other)
+  ($mcall cwd (pain-other)))
 (define (cd-other-to-current)
   ($mcall chdir (pain-other) ($mcall cwd (pain-current))))
 (define (cd-current-to-other)
   ($mcall chdir (pain-current) ($mcall cwd (pain-other))))
+
+(define (filer-current)
+  ($attr filer (pain-current)))
 
 ; view api {{{
 (define (set-window-size width height)
@@ -291,6 +296,7 @@
 (define-key normal-map "e" 'open-editor)
 (define-key normal-map "y" 'set-clipboard-filename)
 (define-key normal-map "S-y" 'set-clipboard-filepath)
+(define-key normal-map "S-a" 'favorite-add)
 
 (define-key search-map  "Return" 'search-enter)
 (define-key search-map "Escape" 'search-cancel)
@@ -319,19 +325,15 @@
 
 (define (str val)
   ($call str val))
-(define favorite-path "~/.pyfiler/favorite")
+(define *favorite-path* "~/.pyfiler/favorite")
 (define (cd-favorite)
-  (cd favorite-path))
+  (cd *favorite-path*))
 (define (mkdir-command)
   (sh-mode)
   (set-commandline-text "mkdir "))
 
 ; 関連付け開く {{{
-(define *my-assoc*
-  '(
-	(".xls" ("C:/Program Files/Microsoft Office/OFFICE11/excel.exe" "/t"))
-	(".doc" ("C:/Program Files/Microsoft Office/OFFICE11/winword.exe" "/f"))
-	))
+(define *my-assoc* nil)
 ($import os.path)
 (define (open-my-assoc)
   (let* ((filename (file-name (cursor-file)))
@@ -341,6 +343,12 @@
 	(if (not (null? c))
 	  (sh-popen (pwd) (append (cadr c) (list filename)))
 	  nil)))
+
+(set! *my-assoc*
+  (cond ((windows?)
+		 '((".xls" ("C:/Program Files (x86)/Microsoft Office/OFFICE11/excel.exe" "/t"))
+		   (".doc" ("C:/Program Files (x86)/Microsoft Office/OFFICE11/winword.exe" "/f"))))
+		(else nil)))
 ; }}}
 
 ; editor {{{
@@ -381,9 +389,12 @@
 
 (define (set-clipboard-filename)
   (set-clipboard
-	  (string-join " " (map file-name (select-or-cursor-files)))))
+	  (string-join "\n" (map file-name (select-or-cursor-files)))))
 
 (define (set-clipboard-filepath)
   (set-clipboard
-	(string-join " " (map (bind1st file-state "abspath") (select-or-cursor-files)))))
+	(string-join "\n" (map (bind1st file-state "abspath") (select-or-cursor-files)))))
 ; }}}
+
+(define (favorite-add)
+  ($mcall create_shortcut (filer-current) (file-state "abspath" (cursor-file)) *favorite-path*))

@@ -120,14 +120,3 @@ def set_clipboard(text_u):
     tkinter.Text().clipboard_clear()
     tkinter.Text().clipboard_append(text_u)
 
-@Command_
-def create_shortcut(srcpath, dstpath):
-    import win32com.client
-    srcpath = os.path.expandvars(os.path.expanduser(srcpath))
-    dstpath = os.path.expandvars(os.path.expanduser(dstpath))
-    shell = win32com.client.Dispatch("WScript.Shell")
-    shortcut = shell.CreateShortCut(dstpath)
-    shortcut.Targetpath = srcpath
-    shortcut.Save()
-
-

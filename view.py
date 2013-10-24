@@ -51,6 +51,7 @@ class FilerWidget(QtGui.QWidget):
     def __init__(self, viewmodel, parent=None):
         QtGui.QWidget.__init__(self, parent=parent)
         viewmodel.attach(self)
+        self.isfileiconenable = False
         self.setup_ui(viewmodel)
 
     def setup_ui(self, viewmodel):
@@ -112,8 +113,11 @@ class FilerWidget(QtGui.QWidget):
                     item = None
                     if col in f.state:
                         if col == 'filename':
-                            icon = QtGui.QFileIconProvider().icon(QtCore.QFileInfo(f.state['abspath']))
-                            item = QtGui.QTableWidgetItem(icon, f.state[col])
+                            if self.isfileiconenable:
+                                icon = QtGui.QFileIconProvider().icon(QtCore.QFileInfo(f.state['abspath']))
+                                item = QtGui.QTableWidgetItem(icon, f.state[col])
+                            else:
+                                item = QtGui.QTableWidgetItem(f.state[col])
                         elif col == 's':
                             item = QtGui.QTableWidgetItem('*' if f.isselect else ' ')
                         elif col == 'st_size':
@@ -124,6 +128,8 @@ class FilerWidget(QtGui.QWidget):
                     # 選択時
                     if f.isselect:
                         item.setBackgroundColor(QtGui.QColor(255, 255, 0))
+                    if item is not None and f.state['filemode'].startswith('d'):
+                        item.setTextColor(QtGui.QColor(0, 255, 0))
                     self.tablewidget.setItem(i, j, item)
             self.tablewidget.selectRow(viewmodel.cursor)
             self.tablewidget.resizeRowsToContents()
@@ -245,8 +251,8 @@ class CentralWidget(QtGui.QWidget):
         panel.setSpacing(0)
         self.setLayout(panel)
 
-        tab = TabWidget(viewmodel)
-        panel.addWidget(tab)
+        self.tab = TabWidget(viewmodel)
+        panel.addWidget(self.tab)
 
         log = LogWidet()
         log.setMaximumHeight(100)
@@ -340,6 +346,9 @@ class View(QtCore.QObject):
 
     def set_window_maximized(self):
         self.main_window.showMaximized()
+
+    def set_fileiconenable(self, isenable):
+        self.cw.tab
 
     def load_config(self):
         lispy.load(os.path.expanduser('.pyfilerrc'))

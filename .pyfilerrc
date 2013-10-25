@@ -274,7 +274,7 @@
 (set-style "Cleanlooks")
 
 ; define-key {{{
-(define-key normal-map "d" 'tabclose)
+(define-key normal-map "C-d" 'tabclose)
 (define-key normal-map "g" 'cursor-first)
 (define-key normal-map "h" 'cd-parent)
 (define-key normal-map "j" 'cursor-down)
@@ -283,7 +283,8 @@
 (define-key normal-map "C-l" 'tabnext)
 (define-key normal-map "C-h" 'tabprev)
 (define-key normal-map "r" 'reload-pain)
-(define-key normal-map "t" 'tabnew)
+(define-key normal-map "S-t" 'tabnew)
+(define-key normal-map "t" 'tabnew-pwd)
 (define-key normal-map "o" 'cd-other-to-current)
 (define-key normal-map "C-o" 'cd-current-to-other)
 
@@ -308,7 +309,9 @@
 (define-key normal-map "y" 'set-clipboard-filename)
 (define-key normal-map "S-y" 'set-clipboard-filepath)
 (define-key normal-map "S-a" 'favorite-add)
-(define-key normal-map "m" 'move)
+(define-key normal-map "m" 'move-files)
+(define-key normal-map "c" 'copy-files)
+(define-key normal-map "d" 'remove-files)
 
 (define-key search-map  "Return" 'search-enter)
 (define-key search-map "Escape" 'search-cancel)
@@ -408,13 +411,30 @@
 	(string-join "\n" (map (bind1st file-state "abspath") (select-or-cursor-files)))))
 ; }}}
 ; TODO Safeモードを実装すること
-(define (move)
-  (let ((mv ($attr move (filer-current)))
-		(dst (pwd-other)))
-	(for-each (lambda (src) (mv (file-state "abspath" src) dst)) (select-files))
-	(reload-tab)))
+(define (pain-to-pain func files)
+	(for-each (lambda (src) (func (file-state "abspath" src) (pwd-other))) files)
+	(reload-tab))
+
+(define (copy-files)
+  (pain-to-pain ($attr copy (filer-current)) (select-files)))
+
+(define (move-files)
+  (pain-to-pain ($attr move (filer-current)) (select-files)))
+
+(define (remove-files)
+  (for-each (lambda (src) (($attr remove (filer-current)) (file-state "abspath" src) )) (select-files))
+	(reload-tab))
 
 (define (favorite-add)
   (let ((func (cond ((windows?) ($attr create_shortcut (filer-current)))
 					(else ($attr create_symlink (filer-current))))))
 	(func (file-state "abspath" (cursor-file)) *favorite-path*)))
+
+
+(define (tabnew-pwd)
+  ; pwd をleftとrightから取得すること
+  (let ((left-pwd (pwd))
+		(right-pwd (pwd-other)))
+	(tabnew)
+	($mcall chdir (pain-current) left-pwd)
+	($mcall chdir (pain-other) right-pwd)))

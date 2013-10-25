@@ -107,13 +107,22 @@ class BaseFiler(object):
         logging.info('move "' + abs_src + '" -> "' + abs_dst + '"')
 
     def copy(self, src, dst):
-        abs_src = self._abspath(src)
-        abs_dst = self._abspath(dst)
+        src = self._abspath(src)
+        dst = self._abspath(dst)
 
-        if os.path.isfile(abs_src):
-            shutil.copy(abs_src, abs_dst)
-        elif os.path.isdir(abs_src):
-            shutil.copytree(abs_src, abs_dst)
+        # 上書きコピー禁止
+        if src == dst and os.path.isfile(src) and os.path.isfile(dst):
+            raise IOError()
+        if os.path.isdir(dst) and os.path.exists(os.path.join(dst, os.path.basename(src))):
+            raise IOError()
+
+        if os.path.isfile(src):
+            shutil.copy2(src, dst)
+            logging.info('copy "' + src + '" -> "' + dst + '"')
+        elif os.path.isdir(src):
+            dst = os.path.join(dst, os.path.basename(src))
+            shutil.copytree(src, dst)
+            logging.info('copy "' + src + '" -> "' + dst + '"')
         else:
             raise IOError()
 

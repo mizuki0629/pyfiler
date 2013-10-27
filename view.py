@@ -348,6 +348,9 @@ class View(QtCore.QObject):
         self.cw.tab
 
     def load_config(self):
+        lispy.load('lispy/builtins.scm')
+        lispy.load('lispy/binding.scm')
+        #lispy.load('lispy/filer.scm')
         lispy.load(os.path.expanduser('.pyfilerrc'))
 
     def mainloop(self):

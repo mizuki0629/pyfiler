@@ -127,13 +127,19 @@ class BaseFiler(object):
             raise IOError()
 
     def remove(self, path):
-        abs_path = self._abspath(path)
-        if os.path.isfile(abs_path):
-            os.remove(abs_path)
-        elif os.path.isdir(abs_path):
-            shutil.rmtree(abs_path)
-        else:
-            raise IOError()
+        path = self._abspath(path)
+        try:
+            from send2trash import send2trash
+            send2trash(path)
+            logging.info('trash "' + path + '"')
+        except ImportError as e:
+            if os.path.isfile(path):
+                os.remove(path)
+            elif os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                raise IOError()
+            logging.info('remove "' + path + '"')
 
     def create_symlink(self, srcpath, dstpath):
         srcpath = self._abspath(srcpath)

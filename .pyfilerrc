@@ -1,440 +1,77 @@
 ; vim:set filetype=scheme foldmethod=marker:
+(require "filer")
 
-; === 関数定義 === {{{
-; 基本的な関数{{{
-; 関数 cxxr
-(define cadr (lambda (x) (car (cdr x))))
-(define cdar (lambda (x) (cdr (car x))))
-(define caar (lambda (x) (car (car x))))
-(define cddr (lambda (x) (cdr (cdr x))))
-
-(define-macro let*
-  (lambda args
-	(let ((ag (car args))
-		 (body (cdr args)))
-	  (if (null? (cdr ag))
-		`(let (,(car ag)) ,@body)
-		`(let (,(car ag)) (let* ,(cdr ag) ,@body))))))
-
-(define-macro cond
-  (lambda args
-    (if (null? args)
-        '*undef*
-      (if (eq? (caar args) 'else)
-          `(begin ,@(cdar args))
-        (if (null? (cdar args))
-            `(let ((+value+ ,(caar args)))
-              (if +value+ +value+ (cond ,@(cdr args))))
-          `(if ,(caar args)
-               (begin ,@(cdar args))
-            (cond ,@(cdr args))))))))
-
-(define (assq x y)
-  (cond ((null? y) nil)
-		((eq? x (caar y)) (car y))
-		(#t (assoc x (cdr y))) ))
-
-(define (assoc x y)
-  (cond ((null? y) nil)
-		((equal? x (caar y)) (car y))
-		(#t (assoc x (cdr y))) ))
-
-(define (filter predicate ls)
-  (cond ((null? ls) nil)
-		((predicate (car ls))
-		 (cons (car ls) (filter predicate (cdr ls))))
-		(else
-		  (filter predicate (cdr ls)))))
-
-; マッピング
-(define map
-  (lambda (fn ls)
-    (if (null? ls)
-        '()
-      (cons (fn (car ls)) (map fn (cdr ls))))))
-
-(define map-2
-  (lambda (fn xs ys)
-    (if (null? xs)
-        '()
-      (cons (fn (car xs) (car ys)) (map-2 fn (cdr xs) (cdr ys))))))
-
-; フィルター
-(define filter
-  (lambda (fn ls)
-    (if (null? ls)
-        '()
-      (if (fn (car ls))
-          (cons (car ls) (filter fn (cdr ls)))
-        (filter fn (cdr ls))))))
-
-
-(define for-each
-  (lambda (fn ls)
-    (if (null? ls) '()
-	  (begin
-		(fn (car ls))
-		(for-each fn (cdr ls))))))
-
-(define (reduce f g ls)
-  (if (null? ls)
-	g
-	(reduce f (f g (car ls)) (cdr ls))))
-
-;}}}
-
-; python binding macro {{{
-(define-macro $call/mod
-	(lambda args
-	  `(py-call-with-module (quote ,(car args)) (quote ,(cadr args)) ,@(cddr args))))
-
-(define-macro $gattr
-	(lambda args
-	  `(py-class (quote ,(car args)) (quote ,(cadr args)))))
-
-(define-macro $call
-	(lambda args
-	  `(py-call (quote ,(car args)) ,@(cdr args))))
-
-(define-macro $attr
-	(lambda args
-	  `(py-attr (quote ,(car args)) ,@(cdr args))))
-
-(define-macro $mcall
-	(lambda args
-	  `(py-method-call (quote ,(car args)) ,@(cdr args))))
-
-(define-macro $import
-	(lambda args
-	  `(py-import (quote ,(car args)) ,@(cdr args))))
-;}}}
-
-($import operator)
-(define +
-  (lambda args
-	(reduce ($gattr operator add) (car args) (cdr args))))
-(define -
-  (lambda args
-	(reduce ($gattr operator sub) (car args) (cdr args))))
-(define *
-  (lambda args
-	(reduce ($gattr operator mul) (car args) (cdr args))))
-(define /
-  (lambda args
-	(reduce ($gattr operator truediv) (car args) (cdr args))))
-
-(define (tabcurrent)
-  ($mcall currentTab filer-model))
-(define (pain-current)
-  ($attr current (tabcurrent)))
-(define (pain-other)
-  ($attr other (tabcurrent)))
-
-
-; platform {{{
-($import platform)
-(define (platform? str)
-  (equal? ($call/mod platform system) str))
-(define (windows?) (platform? "Windows"))
-(define (mac?) (platform? "Darwin"))
-; }}}
-
-; file select {{{
-(define (select-all)
-  ($mcall toggle_isselect_all (pain-current)))
-(define (select-up)
-  ($mcall toggle_isselet_up (pain-current)))
-(define (select-down)
-  ($mcall toggle_isselet_down (pain-current)))
-;}}}
-
-; tab {{{
-(define (tabnew)
-  ($mcall tabnew filer-model)) (define (tabclose)
-  ($mcall removeTab filer-model ($attr currentIndex filer-model)))
-(define (tabnext)
-  ($mcall nextTab filer-model))
-(define (tabprev)
-  ($mcall prevTab filer-model))
-(define (tabchange n)
-  ($mcall changeTab filer-model n))
-(define (tabfirst)
-  (tabchange  0))
-(define (tablast)
-  (tabchange  (- ($call len ($attr tabs filer-model)) 1)))
-; }}}
-
-(define (reload-config)
-  ($mcall load_config filer-view))
-(define (reload-command)
-  ($mcall reload_commands filer-model))
-(define (reload-pain)
-  ($mcall reload (pain-current)))
-(define (reload-tab)
-  (begin
-	($mcall reload (pain-current))
-	($mcall reload (pain-other))))
-(define (reload-stylesheet)
-  ($mcall load_stylesheet filer-view))
-
-; cursor {{{
-(define (cursor-first)
-  ($mcall cursor_first (pain-current)))
-(define (cursor-last)
-  ($mcall cursor_last (pain-current)))
-(define (cursor-up)
-  ($mcall cursor_up (pain-current)))
-(define (cursor-down)
-  ($mcall cursor_down (pain-current)))
-;}}}
-
-(define (change-pain)
-  ($mcall change_focus (tabcurrent)))
-(define (cd-cursor)
-  ($mcall chdir (pain-current)))
-(define (cd path)
-  ($mcall chdir (pain-current) path))
-(define (open-assoc)
-  ($mcall open_assoc (pain-current)))
-(define (cd-parent)
-  ($mcall chdir_parent (pain-current)))
-(define (popd)
-  ($mcall popd (pain-current)))
-(define (pwd)
-  ($mcall cwd (pain-current)))
-(define (pwd-other)
-  ($mcall cwd (pain-other)))
-(define (cd-other-to-current)
-  ($mcall chdir (pain-other) ($mcall cwd (pain-current))))
-(define (cd-current-to-other)
-  ($mcall chdir (pain-current) ($mcall cwd (pain-other))))
-
-(define (filer-current)
-  ($attr filer (pain-current)))
-
-; view api {{{
-(define (set-window-size width height)
-  ($mcall set_window_size filer-view width height))
-
-(define (set-window-maximized)
-  ($mcall set_window_maximized filer-view))
-
-(define set-default-font
-  (lambda args
-	  (apply ($attr set_defaultfont filer-view) args)))
-
-(define (set-window-title title)
-  ($mcall set_window_title filer-view title))
-
-(define (set-style style)
-  ($mcall set_style filer-view style))
-; }}}
-
-(define (normal-mode)
-  ($mcall set_mode filer-model "normal"))
-(define (command-mode)
-  ($mcall set_mode filer-model "command"))
-(define (sh-mode)
-  ($mcall set_mode filer-model "sh"))
-(define (search-mode)
-  ($mcall set_mode filer-model "search"))
-
-(define (search-name fstr)
-  ($mcall search  (pain-current) fstr))
-(define (search-next)
-  ($mcall search  (pain-current)))
-(define (search-prev)
-  ($mcall rsearch  (pain-current)))
-(define (search-cancel)
-  ($mcall search_cancel (pain-current))
-  (normal-mode))
-
-(define (commandline-text)
-  ($mcall text ($attr commandLine ($attr cw filer-view))))
-(define (set-commandline-text text)
-  ($mcall setText ($attr commandLine ($attr cw filer-view)) text))
-
-($import command)
-(define (do-command)
-  ($call/mod command do_command
-			 (+ "(" (commandline-text) ")"))
-  (normal-mode))
-(define (search-enter)
-  ($mcall search_enter (pain-current) (commandline-text))
-  (normal-mode))
-; }}}
-
-; === 設定 === {{{
 (cond
-  ((windows?) (set-default-font "Migu 1M" 10))
-  ((mac?) (set-default-font "Monaco")))
+  ((filer::windows?) (filer::set-default-font "Migu 1M" 10))
+  ((filer::mac?) (filer::set-default-font "Monaco")))
 
-(set-window-size 1100 600)
-(set-window-title "pyfiler")
-(set-style "Cleanlooks")
+(filer::set-window-size 1100 600)
+(filer::set-window-title "pyfiler")
+(filer::set-style "Cleanlooks")
 
 ; define-key {{{
-(define-key normal-map "C-d" 'tabclose)
-(define-key normal-map "g" 'cursor-first)
-(define-key normal-map "h" 'cd-parent)
-(define-key normal-map "j" 'cursor-down)
-(define-key normal-map "k" 'cursor-up)
-(define-key normal-map "l" 'cd-cursor)
-(define-key normal-map "C-l" 'tabnext)
-(define-key normal-map "C-h" 'tabprev)
-(define-key normal-map "r" 'reload-pain)
-(define-key normal-map "S-t" 'tabnew)
-(define-key normal-map "t" 'tabnew-pwd)
-(define-key normal-map "o" 'cd-other-to-current)
-(define-key normal-map "C-o" 'cd-current-to-other)
+(require-python "keymap")
+(define (define-key keymap key action)
+  (keymap::add_keymap keymap key action))
 
-(define-key normal-map "a" 'select-all)
-(define-key normal-map "S-g" 'cursor-last)
-(define-key normal-map "S-r" 'reload-config)
-(define-key normal-map "C-r" 'reload-stylesheet)
-(define-key normal-map "S-Space" 'select-up)
-(define-key normal-map "Space" 'select-down)
-(define-key normal-map "Tab" 'change-pain)
-(define-key normal-map "Return" 'open-assoc)
-(define-key normal-map "S-Return" 'open-my-assoc)
-(define-key normal-map "S-h" 'popd)
-(define-key normal-map "Semicolon" 'command-mode)
-(define-key normal-map "C-Semicolon" 'sh-mode)
-(define-key normal-map "Slash" 'search-mode)
-(define-key normal-map "n" 'search-next)
-(define-key normal-map "S-n" 'search-prev)
-(define-key normal-map "S-j" 'cd-favorite)
-(define-key normal-map "C-n" 'mkdir-command)
-(define-key normal-map "e" 'open-editor)
-(define-key normal-map "y" 'set-clipboard-filename)
-(define-key normal-map "S-y" 'set-clipboard-filepath)
-(define-key normal-map "S-a" 'favorite-add)
-(define-key normal-map "m" 'move-files)
-(define-key normal-map "c" 'copy-files)
-(define-key normal-map "d" 'remove-files)
+(define (define-keys keymap lis)
+  (define (iter ls)
+	(if (null? ls) keymap
+	  (begin
+		(let* ((pair (car ls))
+			   (key (car pair))
+			   (func (cadr pair)))
+		  (define-key keymap key func))
+		(iter (cdr ls)))))
+  (iter lis))
 
-(define-key search-map  "Return" 'search-enter)
-(define-key search-map "Escape" 'search-cancel)
-(define-key command-map "Return" 'do-command)
-(define-key command-map "Escape" 'normal-mode)
-(define-key sh-map "Escape" 'normal-mode)
-(define-key sh-map "Return" 'do-sh)
-;}}}
-;}}}
+(define-keys normal-map
+			 '(
+			   ("a" filer::select-all)
+			   ("c" filer::copy-files)
+			   ("d" filer::remove-files)
+			   ("e" filer::open-editor)
+			   ("g" filer::cursor-first)
+			   ("h" filer::cd-parent)
+			   ("j" filer::cursor-down)
+			   ("k" filer::cursor-up)
+			   ("l" filer::cd-cursor)
+			   ("m" filer::move-files)
+			   ("n" filer::search-next)
+			   ("o" filer::cd-other-to-current)
+			   ("r" filer::reload-pain)
+			   ("t" filer::tabnew-pwd)
+			   ("y" filer::set-clipboard-filename)
+			   ("Return" filer::open-assoc)
+			   ("Semicolon" filer::command-mode)
+			   ("Slash" filer::search-mode)
+			   ("Space" filer::select-down)
+			   ("Tab" filer::change-pain)
+			   ("C-d" filer::tabclose)
+			   ("C-h" filer::tabprev)
+			   ("C-l" filer::tabnext)
+			   ("C-n" filer::mkdir-command)
+			   ("C-o" filer::cd-current-to-other)
+			   ("C-r" filer::reload-stylesheet)
+			   ("C-Semicolon" filer::sh-mode)
+			   ("S-a" filer::favorite-add)
+			   ("S-g" filer::cursor-last)
+			   ("S-h" filer::popd)
+			   ("S-j" filer::cd-favorite)
+			   ("S-n" filer::search-prev)
+			   ("S-r" filer::reload-config)
+			   ("S-t" filer::tabnew)
+			   ("S-y" filer::set-clipboard-filepath)
+			   ("S-Return" filer::open-my-assoc)
+			   ("S-Space" filer::select-up)
+			   ))
 
-; logging {{{
-($import logging)
-(define (log-debug str)
-	($call/mod logging debug str))
-(define (log-info str)
-	($call/mod logging info str))
-; }}}
-
-(define-macro sh
-  (lambda args
-	`(sh-call ,(pwd) (quote ,args))))
-(define (do-sh)
-  ($call/mod command do_command
-			 (+ "(sh " (commandline-text) ")"))
-  (normal-mode))
-
-(define (str val)
-  ($call str val))
-(define *favorite-path* "~/.pyfiler/favorite")
-(define (cd-favorite)
-  (cd *favorite-path*))
-(define (mkdir-command)
-  (sh-mode)
-  (set-commandline-text "mkdir "))
-
-; 関連付け開く {{{
-(define *my-assoc* nil)
-($import os.path)
-(define (open-my-assoc)
-  (let* ((filename (file-name (cursor-file)))
-		 (c (assoc
-			  (cadr (($attr splitext ($gattr os.path path)) filename))
-			  *my-assoc*)))
-	(if (not (null? c))
-	  (sh-popen (pwd) (append (cadr c) (list filename)))
-	  nil)))
-
-(set! *my-assoc*
-  (cond ((windows?)
-		 '((".xls" ("C:/Program Files (x86)/Microsoft Office/OFFICE11/excel.exe" "/t"))
-		   (".doc" ("C:/Program Files (x86)/Microsoft Office/OFFICE11/winword.exe" "/f"))))
-		(else nil)))
-; }}}
-
-; editor {{{
-(define *editor*
-  (cond
-	((windows?) '("C:/Program Files (x86)/vim74-kaoriya-win64/gvim.exe" "-p" "--remote-tab-silent"))
-	((mac?) '("open" "-a" "MacVim"))))
-(define (open-editor)
-  (sh-popen (pwd) (append *editor* (list (file-name (cursor-file))))))
-; }}}
-
-; file 関数{{{
-(define (file-state st file)
-  ($mcall get ($attr state file) st))
-(define (cursor-file)
-  ($mcall get_cursor_file (pain-current)))
-(define (file-name file)
-  (file-state "filename" file))
-(define (files)
-  ($attr files (pain-current)))
-(define (select-file? file)
-  ($attr isselect  file))
-(define (select-files)
-  (filter select-file? (files)))
-(define (select-or-cursor-files)
-  (if (null? (select-files))
-	(list (cursor-file))
-	(select-files)))
+(define-key search-map  "Return" 'filer::search-enter)
+(define-key search-map "Escape" 'filer::search-cancel)
+(define-key command-map "Return" 'filer::do-command)
+(define-key command-map "Escape" 'filer::normal-mode)
+(define-key sh-map "Escape" 'filer::normal-mode)
+(define-key sh-map "Return" 'filer::do-sh)
 ;}}}
 
-; クリップボード {{{
-(define (bind1st func arg1)
-  (lambda args
-	(apply func (cons arg1  args))))
-
-(define (string-join delimiter lis)
-	  (reduce (lambda (x y) (+ x delimiter y)) (car lis) (cdr lis)))
-
-(define (set-clipboard-filename)
-  (set-clipboard
-	  (string-join "\n" (map file-name (select-or-cursor-files)))))
-
-(define (set-clipboard-filepath)
-  (set-clipboard
-	(string-join "\n" (map (bind1st file-state "abspath") (select-or-cursor-files)))))
-; }}}
-; TODO Safeモードを実装すること
-(define (pain-to-pain func files)
-	(for-each (lambda (src) (func (file-state "abspath" src) (pwd-other))) files)
-	(reload-tab))
-
-(define (copy-files)
-  (pain-to-pain ($attr copy (filer-current)) (select-files)))
-
-(define (move-files)
-  (pain-to-pain ($attr move (filer-current)) (select-files)))
-
-(define (remove-files)
-  (for-each (lambda (src) (($attr remove (filer-current)) (file-state "abspath" src) )) (select-files))
-	(reload-tab))
-
-(define (favorite-add)
-  (let ((func (cond ((windows?) ($attr create_shortcut (filer-current)))
-					(else ($attr create_symlink (filer-current))))))
-	(func (file-state "abspath" (cursor-file)) *favorite-path*)))
-
-
-(define (tabnew-pwd)
-  ; pwd をleftとrightから取得すること
-  (let ((left-pwd (pwd))
-		(right-pwd (pwd-other)))
-	(tabnew)
-	($mcall chdir (pain-current) left-pwd)
-	($mcall chdir (pain-other) right-pwd)))
+(filer::tabrestore)

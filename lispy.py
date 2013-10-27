@@ -10,6 +10,7 @@ import re, sys, io
 import collections
 import logging
 import json
+import types
 
 class Symbol(str): pass
 
@@ -122,8 +123,8 @@ def repl(prompt='lispy> ', inport=InPort(sys.stdin), out=sys.stdout):
             val = eval(x)
             if val is not None and out: print(to_string(val), file=out)
         except Exception as e:
+            logging.error('%s: %s\n%s' % (type(e).__name__, e, to_string(x)))
             logging.exception(e)
-            #print('%s: %s' % (type(e).__name__, e))
 
 ################ Environment class
 
@@ -144,6 +145,10 @@ class Env(dict):
         if var in self: return self
         elif self.outer is None: raise LookupError(var)
         else: return self.outer.find(var)
+    def find2(self, var):
+        "Find the innermost Env where var appears."
+        if var in self: return self
+        else: raise LookupError(var)
 
 class Pair(list): pass
 def is_pair(x): return x != [] and isa(x, list)
@@ -169,6 +174,30 @@ def callcc(proc):
         if w is ball: return ball.retval
         else: raise w
 
+def require_python(name):
+    if name in global_env and isinstance(global_env.find(name)[name], types.ModuleType):
+        return
+    ns = name.split('.')
+    tmp = __import__(name, globals(), locals(), [], 0)
+    if len(ns) > 1:
+        for n in ns[1:]:
+            tmp = vars(tmp)[n]
+    env = Env(outer=global_env)
+    env.update(vars(tmp))
+    global_env.update({name:env})
+
+def make_package(name):
+    global_env.update({name:Env(outer=global_env)})
+
+def in_package(name):
+    global package
+    if name == 'global':
+        package = global_env
+    else:
+        if name not in global_env:
+            make_package(name)
+        package = global_env.find(name)[name]
+
 def add_globals(self):
     "Add some Scheme standard procedures."
     import math, cmath, operator as op
@@ -186,24 +215,37 @@ def add_globals(self):
      'boolean?':lambda x: isa(x, bool), 'pair?':is_pair, 
      'port?': lambda x:isa(x,file), 'apply':lambda proc,l: proc(*l), 
      'eval':lambda x: eval(expand(x)), 'load':lambda fn: load(fn), 'call/cc':callcc,
-     'open-input-file':open,'close-input-port':lambda p: p.file.close(), 
+     'open-input-file':lambda f:InPort(open(f, 'r')),'close-input-port':lambda p: p.file.close(), 
      'open-output-file':lambda f:open(f,'w'), 'close-output-port':lambda p: p.close(),
      'eof-object?':lambda x:x is eof_object, 'read-char':readchar,
      'read':read, 'write':lambda x,port=sys.stdout:port.write(to_string(x)),
-     'display':lambda x,port=sys.stdout:port.write(x if isa(x,str) else to_string(x))})
+     'display':lambda x,port=sys.stdout:port.write(x if isa(x,str) else to_string(x)),
+     'make-package':make_package, 'in-package':in_package,
+     'require-python':require_python,
+     })
     return self
 
 isa = isinstance
 
 global_env = add_globals(Env())
+package = global_env
+
+builtins_pak = add_globals(Env(outer=global_env))
+global_env.update({'lisp-builtins': builtins_pak})
 
 ################ eval (tail recursive)
 
-def eval(x, env=global_env):
+def eval(x, env=None):
+    if env is None:
+        env = package
     "Evaluate an expression in an environment."
     while True:
         if isa(x, Symbol):       # variable reference
-            return env.find(x)[x]
+            xx = x.split("::")
+            if len(xx) > 1:
+                return global_env.find(xx[0])[xx[0]].find2(xx[1])[xx[1]]
+            else:
+                return env.find(x)[x]
         elif not isa(x, list):   # constant literal
             return x                
         elif x[0] is _quote:     # (quote exp)

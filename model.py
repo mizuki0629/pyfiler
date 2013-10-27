@@ -345,6 +345,16 @@ class Model(Subject):
     def currentTab(self):
         return self.tabs[self.currentIndex]
 
+    def onlyTab(self):
+        i = 0
+        while True:
+            if len(self.tabs) <= 1:
+                return
+            if self.currentIndex != i:
+                self.removeTab(i)
+            else:
+                i += 1
+
     def removeTab(self, index):
         if len(self.tabs) > 1:
             self.tabs.pop(index)

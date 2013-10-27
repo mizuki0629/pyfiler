@@ -1,5 +1,6 @@
 ; vim:set filetype=scheme foldmethod=marker:
 (require "filer")
+(require-python "logging")
 
 (cond
   ((filer::windows?) (filer::set-default-font "Migu 1M" 10))

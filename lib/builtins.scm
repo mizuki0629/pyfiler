@@ -1,9 +1,36 @@
 ; vim:set filetype=scheme foldmethod=marker:
-; 関数 cxxr
-(define cadr (lambda (x) (car (cdr x))))
-(define cdar (lambda (x) (cdr (car x))))
-(define caar (lambda (x) (car (car x))))
-(define cddr (lambda (x) (cdr (cdr x))))
+; cxxr {{{
+(define (caar x) (car (car x)))
+(define (cadr x) (car (cdr x)))
+(define (cdar x) (cdr (car x)))
+(define (cddr x) (cdr (cdr x)))
+
+(define (caaar x) (car (caar x)))
+(define (caadr x) (car (cadr x)))
+(define (cadar x) (car (cdar x)))
+(define (caddr x) (car (cddr x)))
+(define (cdaar x) (cdr (caar x)))
+(define (cdadr x) (cdr (cadr x)))
+(define (cddar x) (cdr (cdar x)))
+(define (cdddr x) (cdr (cddr x)))
+
+(define (caaaar x) (car (caaar x)))
+(define (caaadr x) (car (caadr x)))
+(define (caadar x) (car (cadar x)))
+(define (caaddr x) (car (caddr x)))
+(define (cadaar x) (car (cdaar x)))
+(define (cadadr x) (car (cdadr x)))
+(define (caddar x) (car (cddar x)))
+(define (cadddr x) (car (cdddr x)))
+(define (cdaaar x) (cdr (caaar x)))
+(define (cdaadr x) (cdr (caadr x)))
+(define (cdadar x) (cdr (cadar x)))
+(define (cdaddr x) (cdr (caddr x)))
+(define (cddaar x) (cdr (cdaar x)))
+(define (cddadr x) (cdr (cdadr x)))
+(define (cdddar x) (cdr (cddar x)))
+(define (cddddr x) (cdr (cdddr x)))
+; }}}
 
 (define-macro let*
   (lambda args
@@ -53,7 +80,6 @@
 		(else
 		  (filter predicate (cdr ls)))))
 
-; マッピング
 (define map
   (lambda (fn ls)
     (if (null? ls)
@@ -66,7 +92,6 @@
         '()
       (cons (fn (car xs) (car ys)) (map-2 fn (cdr xs) (cdr ys))))))
 
-; フィルター
 (define filter
   (lambda (fn ls)
     (if (null? ls)
@@ -87,22 +112,15 @@
 	g
 	(reduce f (f g (car ls)) (cdr ls))))
 
-(define _+ +)
-(define +
-  (lambda args
-	(reduce _+ (car args) (cdr args))))
-(define _- -)
-(define -
-  (lambda args
-	(reduce _- (car args) (cdr args))))
-(define _* *)
-(define *
-  (lambda args
-	(reduce _* (car args) (cdr args))))
-(define __/ /)
-(define /
-  (lambda args
-	(reduce _/ (car args) (cdr args))))
+(require-python "operator")
+(define (+ init . ls)
+	(reduce operator::add init ls))
+(define (- init . ls)
+	(reduce operator::sub init ls))
+(define (* init . ls)
+	(reduce operator::mul init ls))
+(define (/ init . ls)
+	(reduce operator::truediv init ls))
 
 (define (find predicate lis)
   (define (iter ls)
@@ -117,8 +135,14 @@
 (define (provide name)
 	(set! *provide-list* (cons name *provide-list*)))
 
+; TODO load-pathを実装
+(define *load-path*
+  '(
+	"lib"
+	""
+	))
 (define (require name)
   (if (not (find (lambda (x) (equal? name x)) *provide-list*))
-	(load (+ "lispy/" name ".scm"))
+	(load (+ "lib/" name ".scm"))
 	#f))
 

@@ -136,15 +136,27 @@ class Env(dict):
         if isa(parms, Symbol): 
             self.update({parms:list(args)})
         else: 
+            parms, args, opt_parm, opt_arg = self.get_opt(parms, args)
             if len(args) != len(parms):
                 raise TypeError('expected %s, given %s, ' 
                                 % (to_string(parms), to_string(args)))
             self.update(list(zip(parms,args)))
+            if opt_parm is not None and opt_arg is not None:
+                self.update({opt_parm:opt_arg})
+
+    def get_opt(self, parms, args):
+        if '.' in parms:
+            i = parms.index('.')
+            return parms[:i], args[:i], parms[i+1], list(args[i:])
+        else:
+            return parms, args, None, None
+
     def find(self, var):
         "Find the innermost Env where var appears."
         if var in self: return self
         elif self.outer is None: raise LookupError(var)
         else: return self.outer.find(var)
+
     def find2(self, var):
         "Find the innermost Env where var appears."
         if var in self: return self
@@ -243,7 +255,12 @@ def eval(x, env=None):
         if isa(x, Symbol):       # variable reference
             xx = x.split("::")
             if len(xx) > 1:
-                return global_env.find(xx[0])[xx[0]].find2(xx[1])[xx[1]]
+                if xx[0] == 'attr':
+                    return lambda obj: getattr(obj, xx[1])
+                elif xx[0] == 'method':
+                    return lambda obj, *args, **kwargs: getattr(obj, xx[1])(*args, **kwargs)
+                else:
+                    return global_env.find(xx[0])[xx[0]].find2(xx[1])[xx[1]]
             else:
                 return env.find(x)[x]
         elif not isa(x, list):   # constant literal

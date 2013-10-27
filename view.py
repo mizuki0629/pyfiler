@@ -80,16 +80,19 @@ class FilerWidget(QtGui.QWidget):
         self.update(viewmodel, Subject.Event('update'))
 
     def textcolor(self, file):
-        if file.isselect:
-            return QtGui.QColor(150, 150, 0)
-        # directory
-        elif file.state['filemode'].startswith('d'):
-            return QtGui.QColor(204, 255, 102)
-        elif os.path.islink(file.state['abspath']) or file.state['filename'].endswith('.lnk'):
-            return QtGui.QColor(162, 222, 255)
-        elif file.state['filemode'].endswith('x'):
-            return QtGui.QColor(255, 102, 102)
-        else:
+        try:
+            if file.isselect:
+                return QtGui.QColor(150, 150, 0)
+            # directory
+            elif file.state['filemode'].startswith('d'):
+                return QtGui.QColor(204, 255, 102)
+            elif os.path.islink(file.state['abspath']) or file.state['filename'].endswith('.lnk'):
+                return QtGui.QColor(162, 222, 255)
+            elif file.state['filemode'].endswith('x'):
+                return QtGui.QColor(255, 102, 102)
+            else:
+                return QtGui.QColor(255, 255, 255)
+        except Exception:
             return QtGui.QColor(255, 255, 255)
 
     def update(self, viewmodel, event):
@@ -348,9 +351,7 @@ class View(QtCore.QObject):
         self.cw.tab
 
     def load_config(self):
-        lispy.load('lispy/builtins.scm')
-        lispy.load('lispy/binding.scm')
-        #lispy.load('lispy/filer.scm')
+        lispy.load('lib/builtins.scm')
         lispy.load(os.path.expanduser('.pyfilerrc'))
 
     def mainloop(self):

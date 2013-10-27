@@ -1,9 +1,6 @@
 import lispy
-import keymap
 import logging
 import subprocess
-import tkinter
-import os.path
 import platform
 
 def Command(func):
@@ -56,16 +53,6 @@ def do_command(cmd):
         logging.exception(e)
     return True
 
-# python - lispy binding
-@Command_
-def py_method_call (methodname, self, *args):
-    return getattr(self.__class__, methodname)(self, *args)
-
-@Command_
-def py_attr(attrname, self):
-    return getattr(self, attrname)
-
-
 @Command_
 def sh_call(cwd, args):
     # TODO 判定関数を共通化すること
@@ -74,7 +61,6 @@ def sh_call(cwd, args):
         encoding = 'shift_jis'
     else:
         encoding = 'utf-8'
-    # TODO windowsﾌときにstdoutの文字コードを変更すること
     with subprocess.Popen(args, cwd=cwd,
             stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=isshell) as proc:
         rcd = proc.wait()
@@ -90,13 +76,4 @@ def sh_popen(cwd, args):
 def set_filter(func):
     model.currentTab().current.filter = func
     model.currentTab().current.reload()
-
-@Command_
-def clipboard():
-    return tkinter.Text().clipboard_get()
-
-@Command_
-def set_clipboard(text_u):
-    tkinter.Text().clipboard_clear()
-    tkinter.Text().clipboard_append(text_u)
 

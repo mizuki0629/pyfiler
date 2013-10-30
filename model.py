@@ -84,9 +84,8 @@ class Pain(Subject):
 
     def Reload(func):
         def reload_after_original_function(self, *args, **kwargs):
+            prev_cwd = self.cwd()
             result = func(self, *args, **kwargs)
-            ls = [File(state) for state in self.filer.ls()]
-            iscd = len(ls) != len(self.files)
             if isinstance(self.filter, lispy.Procedure):
                 self.files = lispy.eval([
                     lispy.Symbol('filter'),
@@ -96,7 +95,7 @@ class Pain(Subject):
             else:
                 self.files = list(filter(self.filter, [File(state) for state in self.filer.ls()]))
             # TODO カーソルも履歴をとって設定すること
-            if iscd:
+            if self.cwd() != prev_cwd:
                 self.cursor = 0
             else:
                 self.cursor = self.cursor if self.cursor < len(self.files) else len(self.files) - 1
@@ -318,21 +317,33 @@ class Model(Subject):
             self.currentTab().current.search(text)
 
     def do_keyevent(self, key, modifiers):
-        if self.mode == NORMAL_MODE:
-            keymap.do_keymap(keymap.normal_map,
-                    keymap.Key(key, modifiers))
-            return True
-        elif self.mode == COMMAND_MODE:
-            return keymap.do_keymap(keymap.command_map,
-                    keymap.Key(key, modifiers))
-        elif self.mode == SEARCH_MODE:
-            return keymap.do_keymap(keymap.search_map,
-                    keymap.Key(key, modifiers))
-        elif self.mode == SH_MODE:
-            return keymap.do_keymap(keymap.sh_map,
-                    keymap.Key(key, modifiers))
-        else:
-            return False
+        import cProfile, pstats, io
+        pr = cProfile.Profile()
+        pr.enable()
+        try:
+            if self.mode == NORMAL_MODE:
+                keymap.do_keymap(keymap.normal_map,
+                        keymap.Key(key, modifiers))
+                return True
+            elif self.mode == COMMAND_MODE:
+                return keymap.do_keymap(keymap.command_map,
+                        keymap.Key(key, modifiers))
+            elif self.mode == SEARCH_MODE:
+                return keymap.do_keymap(keymap.search_map,
+                        keymap.Key(key, modifiers))
+            elif self.mode == SH_MODE:
+                return keymap.do_keymap(keymap.sh_map,
+                        keymap.Key(key, modifiers))
+            else:
+                return False
+        finally:
+            pr.disable()
+            s = io.StringIO()
+            sortby = 'time'
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            ps.print_stats()
+            #ps.print_callers()
+            #logging.debug(s.getvalue())
 
     def tabnew(self):
         self.addTab(Tab())

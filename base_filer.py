@@ -22,24 +22,33 @@ class BaseFiler(object):
     cwd = property(get_cwd)
 
     def _abspath(self, path):
-        path = os.path.expandvars(os.path.expanduser(path))
-        if os.path.isabs(path):
+        if os.path.isabs(path) and os.path.exists(path):
             return path
-        else:
-            return os.path.normpath(os.path.join(self.cwd, path))
+
+        tmp = os.path.normpath(os.path.join(self.cwd, path))
+        if os.path.exists(tmp):
+            return  tmp
+
+        tmp = os.path.normpath(os.path.expandvars(tmp))
+        if os.path.exists(tmp):
+            return  tmp
+
+        path = os.path.normpath(os.path.expandvars(os.path.expanduser(path)))
+        return path
 
     # TODO utcfromtimestampで渡して、UIで変換したほうが良い？
     def strftime(self, time):
         #return str(datetime.datetime.utcfromtimestamp(time))
         return datetime.datetime.strftime(datetime.datetime.utcfromtimestamp(time), '%Y/%m/%d %H:%M:%S')
 
-    def stat(self, path):
+    # TODO windowsの場は、Win32APIのFindFirstFile FindNextFile FindCloseを使うように修正するこ
+    def stat(self, abspath):
         dic = {}
-        dic['abspath'] = self._abspath(path)
-        dic['filename'] = os.path.basename(path)
+        dic['abspath'] = abspath
+        dic['filename'] = os.path.basename(abspath)
         try:
 
-            st = os.lstat(self._abspath(path))
+            st = os.lstat(abspath)
             dic['filemode'] = stat.filemode(st.st_mode)
             dic['st_mode'] = st.st_mode
             dic['st_ino'] = st.st_ino
@@ -51,14 +60,14 @@ class BaseFiler(object):
             dic['st_atime'] = self.strftime(st.st_atime)
             dic['st_mtime'] = self.strftime(st.st_mtime)
             dic['st_ctime'] = self.strftime(st.st_ctime)
-        except PermissionError:
-            pass
+        except Exception as e:
+            logging.exception(e)
         return dic
 
     def ls(self):
         lis = sorted(os.listdir(self.cwd), key=str.lower)
         lis.insert(0, '..')
-        return (self.stat(f) for f in lis)
+        return (self.stat(os.path.join(self.cwd, f)) for f in lis)
 
     def open_assoc(self, path):
         abspath = self._abspath(path)

@@ -11,6 +11,7 @@ from model import Model, Subject, COMMAND_MODE, SEARCH_MODE, SH_MODE
 import command
 import lispy
 import os.path
+import stat
 
 # TODO まとめる
 horizontal_header = ['s', 'filename', 'filemode', 'st_ctime', 'st_size', ]
@@ -86,7 +87,7 @@ class FilerWidget(QtGui.QWidget):
             # directory
             elif file.state['filemode'].startswith('d'):
                 return QtGui.QColor(204, 255, 102)
-            elif os.path.islink(file.state['abspath']) or file.state['filename'].endswith('.lnk'):
+            elif stat.S_ISLNK(file.state['st_mode']) or file.state['filename'].endswith('.lnk'):
                 return QtGui.QColor(162, 222, 255)
             elif file.state['filemode'].endswith('x'):
                 return QtGui.QColor(255, 102, 102)

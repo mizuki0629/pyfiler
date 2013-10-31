@@ -14,7 +14,7 @@ import os.path
 import stat
 
 # TODO まとめる
-horizontal_header = ['s', 'filename', 'filemode', 'st_ctime', 'st_size', ]
+horizontal_header = ['s', 'filename', 'filemode', 'st_mtime', 'st_size', ]
 header_resizemode = [
         (QtGui.QHeaderView.Fixed, 15),
         (QtGui.QHeaderView.Stretch, 0),
@@ -85,11 +85,13 @@ class FilerWidget(QtGui.QWidget):
             if file.isselect:
                 return QtGui.QColor(150, 150, 0)
             # directory
-            elif file.state['filemode'].startswith('d'):
+            elif file.state.get('filemode', '').startswith('d'):
                 return QtGui.QColor(204, 255, 102)
-            elif stat.S_ISLNK(file.state['st_mode']) or file.state['filename'].endswith('.lnk'):
+            elif file.state.get('filemode', '').startswith('l'):
                 return QtGui.QColor(162, 222, 255)
-            elif file.state['filemode'].endswith('x'):
+            elif file.state.get('filename', '').endswith('.lnk'):
+                return QtGui.QColor(102, 162, 255)
+            elif file.state.get('filemode', '').endswith('x'):
                 return QtGui.QColor(255, 102, 102)
             else:
                 return QtGui.QColor(255, 255, 255)
@@ -106,9 +108,10 @@ class FilerWidget(QtGui.QWidget):
                 color = self.textcolor(viewmodel.files[i])
                 for j, col in enumerate(horizontal_header):
                     if col == 's':
-                        item = QtGui.QTableWidgetItem(val)
-                        self.tablewidget.setItem(i, j, item)
-                    self.tablewidget.item(i, j).setTextColor(color)
+                        self.tablewidget.setItem(i, j, QtGui.QTableWidgetItem(val))
+                    item = self.tablewidget.item(i, j)
+                    if item is not None:
+                        item.setTextColor(color)
         else:
             self.cwdline.setText(viewmodel.cwd())
 
@@ -367,7 +370,7 @@ def main():
     formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(filename)s#%(funcName)s(%(lineno)d) - %(message)s')
 
     #sys.stderrへ出力するハンドラーを定義
-    sh = logging.handlers.TimedRotatingFileHandler('pyfiler.log', when='D', interval=1, backupCount=5)
+    sh = logging.handlers.TimedRotatingFileHandler('log/pyfiler.log', when='D', interval=1, backupCount=5)
     sh.setLevel(logging.DEBUG)
     sh.setFormatter(formatter)
     logger.addHandler(sh)

@@ -47,7 +47,6 @@ class BaseFiler(object):
         dic['abspath'] = abspath
         dic['filename'] = os.path.basename(abspath)
         try:
-
             st = os.lstat(abspath)
             dic['filemode'] = stat.filemode(st.st_mode)
             dic['st_mode'] = st.st_mode
@@ -64,10 +63,54 @@ class BaseFiler(object):
             logging.exception(e)
         return dic
 
-    def ls(self):
+    def ls_win(self):
+        def create_stat(lis):
+            dic = {}
+            dic['filename'] = lis[8]
+            dic['abspath'] = os.path.join(self.cwd, dic['filename'])
+            dic['st_size'] = str((int(lis[4]) << 32) + int(lis[5]))
+            dic['st_atime'] = datetime.datetime.strftime(lis[2], '%Y/%m/%d %H:%M:%S')
+            dic['st_mtime'] = datetime.datetime.strftime(lis[3], '%Y/%m/%d %H:%M:%S')
+            mode = ['-', 'r', 'w', '-', 'r', 'w', '-', 'r', 'w', '-', ]
+            fileattr = lis[0]
+            if fileattr & win32con.FILE_ATTRIBUTE_DIRECTORY:
+                mode[0] = 'd'
+                mode[3] = 'x'
+                mode[6] = 'x'
+                mode[9] = 'x'
+            if fileattr & win32con.FILE_ATTRIBUTE_REPARSE_POINT:
+                mode[0] = 'l'
+            if fileattr & win32con.FILE_ATTRIBUTE_READONLY:
+                mode[2] = '-'
+                mode[5] = '-'
+                mode[8] = '-'
+            if dic['filename'].endswith(".exe") or dic['filename'].endswith(".cmd"):
+                mode[3] = 'x'
+                mode[6] = 'x'
+                mode[9] = 'x'
+
+            dic['filemode'] = '%s%s%s%s%s%s%s%s%s%s' % tuple(mode)
+            return dic
+
+        import win32api
+        import win32con
+        # TODO ソートすること
+        # TODO '.'を削除すること
+        return (create_stat(f) for f in win32api.FindFiles(os.path.join(self.cwd, '*')))
+
+    def ls_common(self):
         lis = sorted(os.listdir(self.cwd), key=str.lower)
         lis.insert(0, '..')
         return (self.stat(os.path.join(self.cwd, f)) for f in lis)
+
+    def ls(self):
+        if 'Windows' == platform.system():
+            try:
+                return self.ls_win()
+            except ImportError:
+                return self.ls_common()
+        else:
+            return self.ls_common()
 
     def open_assoc(self, path):
         abspath = self._abspath(path)

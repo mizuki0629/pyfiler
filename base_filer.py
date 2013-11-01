@@ -9,6 +9,65 @@ import datetime
 import subprocess
 import logging
 import platform
+import subprocess
+
+class BaseStatus(object):
+    def __init__(self, original=None):
+        self.original = original
+        self.cwd = original.cwd
+        if self.original is None:
+            os.getcwd()
+
+    def ls(self):
+        return {}
+
+    def __call__(self):
+        if self.origin in not None:
+
+
+class GitStatus(BaseStatus):
+    def git_status(self, encoding='utf-8'):
+        ps = subprocess.Popen(['git', 'status', '-s'],
+                cwd=self.cwd,
+                stdout=subprocess.PIPE)
+        dict = {}
+        for gs in ps.stdout.readline().decode(encoding=encoding):
+            dict[gs[2:]] = {'git_wk':gs[0], 'git_idx':gs[1]}
+        return dict
+
+    def __call__(self):
+        gls = self.git_status(self.cwd)
+        ls = self.orinal()
+        for fdict in ls:
+            fdict.update(gls.get(fdict['filename'], {}))
+        return ls
+
+class FileStatus(BaseStatus):
+    def stat(self, abspath):
+        dic = {}
+        dic['abspath'] = abspath
+        dic['filename'] = os.path.basename(abspath)
+        try:
+            st = os.lstat(abspath)
+            dic['filemode'] = stat.filemode(st.st_mode)
+            dic['st_mode'] = st.st_mode
+            dic['st_ino'] = st.st_ino
+            dic['st_dev'] = st.st_dev
+            dic['st_nlink'] = st.st_nlink
+            dic['st_uid'] = st.st_uid
+            dic['st_gid'] = st.st_gid
+            dic['st_size'] = str(st.st_size)
+            dic['st_atime'] = self.strftime(st.st_atime)
+            dic['st_mtime'] = self.strftime(st.st_mtime)
+            dic['st_ctime'] = self.strftime(st.st_ctime)
+        except Exception as e:
+            logging.exception(e)
+        return dic
+
+    def __call__(self):
+        lis = sorted(os.listdir(self.cwd), key=str.lower)
+        lis.insert(0, '..')
+        return (self.stat(os.path.join(self.cwd, f)) for f in lis)
 
 
 class BaseFiler(object):
@@ -36,12 +95,10 @@ class BaseFiler(object):
         path = os.path.normpath(os.path.expandvars(os.path.expanduser(path)))
         return path
 
-    # TODO utcfromtimestampで渡して、UIで変換したほうが良い？
     def strftime(self, time):
         #return str(datetime.datetime.utcfromtimestamp(time))
         return datetime.datetime.strftime(datetime.datetime.utcfromtimestamp(time), '%Y/%m/%d %H:%M:%S')
 
-    # TODO windowsの場は、Win32APIのFindFirstFile FindNextFile FindCloseを使うように修正するこ
     def stat(self, abspath):
         dic = {}
         dic['abspath'] = abspath
@@ -94,9 +151,8 @@ class BaseFiler(object):
 
         import win32api
         import win32con
-        # TODO ソートすること
-        # TODO '.'を削除すること
-        return (create_stat(f) for f in win32api.FindFiles(os.path.join(self.cwd, '*')))
+        return (create_stat(f) for f in sorted(win32api.FindFiles(os.path.join(self.cwd, '*')),
+                                               key=lambda x: x[8]) if f[8] != '.')
 
     def ls_common(self):
         lis = sorted(os.listdir(self.cwd), key=str.lower)

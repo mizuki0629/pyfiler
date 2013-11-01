@@ -1,4 +1,4 @@
 /__pycache__
 tags
-*.log
+log/*
 *.log.*

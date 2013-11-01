@@ -102,7 +102,7 @@ def to_string(x):
     if x is True: return "#t"
     elif x is False: return "#f"
     elif isa(x, Symbol): return x
-    elif isa(x, str): return '"%s"' % x.replace('"',r'\"')
+    elif isa(x, str): return json.dumps(x)
     elif isa(x, Pair): return '('+' . '.join(map(to_string, x))+')'
     elif isa(x, list): return '('+' '.join(map(to_string, x))+')'
     elif isa(x, complex): return str(x).replace('j', 'i')

@@ -2,13 +2,14 @@
 # coding=utf-8
 
 import logging
-from base_filer import BaseFiler
+from base_filer import BaseFiler, WindowsFiler
 import os.path
 import lispy
 import command
 import imp
 import keymap
 import re
+import platform
 
 
 class Subject(object):
@@ -59,7 +60,10 @@ class Pain(Subject):
     def __init__(self, filer=BaseFiler):
         Subject.__init__(self)
         self.filter = nop_filter
-        self.filer = filer()
+        if 'Windows' == platform.system():
+            self.filer = WindowsFiler()
+        else:
+            self.filer = filer()
         self.filer_args = []
         self.files = []
         self.cursor = 0
@@ -86,14 +90,7 @@ class Pain(Subject):
         def reload_after_original_function(self, *args, **kwargs):
             prev_cwd = self.cwd()
             result = func(self, *args, **kwargs)
-            if isinstance(self.filter, lispy.Procedure):
-                self.files = lispy.eval([
-                    lispy.Symbol('filter'),
-                    [self.filter] + self.filter_args,
-                    [lispy._quote, ls]
-                    ])
-            else:
-                self.files = list(filter(self.filter, [File(state) for state in self.filer.ls()]))
+            self.files = sorted(self.filer.ls(), key=lambda x: x['filename'])
             # TODO カーソルも履歴をとって設定すること
             if self.cwd() != prev_cwd:
                 self.cursor = 0

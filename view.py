@@ -14,7 +14,7 @@ import os.path
 import stat
 
 # TODO まとめる
-horizontal_header = ['s', 'filename', 'filemode', 'st_mtime', 'st_size', ]
+horizontal_header = ['s', 'filename', 'git_wk', 'git_idx', 'filemode', 'st_mtime', 'st_size', ]
 header_resizemode = [
         (QtGui.QHeaderView.Fixed, 15),
         (QtGui.QHeaderView.Stretch, 0),

@@ -9,40 +9,69 @@ import datetime
 import subprocess
 import logging
 import platform
-import subprocess
 
-class BaseStatus(object):
-    def __init__(self, original=None):
-        self.original = original
-        self.cwd = original.cwd
-        if self.original is None:
-            os.getcwd()
-
-    def ls(self):
-        return {}
-
-    def __call__(self):
-        if self.origin in not None:
+def marge_dict(*args):
+    dst = {}
+    for src in args:
+        dst.update(src)
+    return dst
 
 
-class GitStatus(BaseStatus):
-    def git_status(self, encoding='utf-8'):
+class DecorateStatus(object):
+    def __init__(self, org=None):
+        self.org = org
+
+    def status(self, cwd):
+        pass
+
+    def __call__(self, cwd):
+        ls = self.status(cwd)
+        return {k: marge_dict(v, ls.get(k, {})) for k, v in self.org(cwd).items()}
+
+
+class GitStatus(DecorateStatus):
+    def status(self, cwd):
         ps = subprocess.Popen(['git', 'status', '-s'],
-                cwd=self.cwd,
+                cwd=cwd,
                 stdout=subprocess.PIPE)
-        dict = {}
-        for gs in ps.stdout.readline().decode(encoding=encoding):
-            dict[gs[2:]] = {'git_wk':gs[0], 'git_idx':gs[1]}
-        return dict
+        ps.wait()
+        return { gs[3:]: {'git_wk':gs[0], 'git_idx':gs[1]} for gs in map(lambda x:x.decode(encoding='utf-8').rstrip('\n'), ps.stdout.readlines())}
 
-    def __call__(self):
-        gls = self.git_status(self.cwd)
-        ls = self.orinal()
-        for fdict in ls:
-            fdict.update(gls.get(fdict['filename'], {}))
-        return ls
+class WinFileStatus(object):
+    def stat(self, cwd, lis):
+        dic = {}
+        dic['filename'] = lis[8]
+        dic['abspath'] = os.path.join(cwd, dic['filename'])
+        dic['st_size'] = str((int(lis[4]) << 32) + int(lis[5]))
+        dic['st_atime'] = datetime.datetime.strftime(lis[2], '%Y/%m/%d %H:%M:%S')
+        dic['st_mtime'] = datetime.datetime.strftime(lis[3], '%Y/%m/%d %H:%M:%S')
+        mode = ['-', 'r', 'w', '-', 'r', 'w', '-', 'r', 'w', '-', ]
+        fileattr = lis[0]
+        if fileattr & win32con.FILE_ATTRIBUTE_DIRECTORY:
+            mode[0] = 'd'
+            mode[3] = 'x'
+            mode[6] = 'x'
+            mode[9] = 'x'
+        if fileattr & win32con.FILE_ATTRIBUTE_REPARSE_POINT:
+            mode[0] = 'l'
+        if fileattr & win32con.FILE_ATTRIBUTE_READONLY:
+            mode[2] = '-'
+            mode[5] = '-'
+            mode[8] = '-'
+        if dic['filename'].endswith(".exe") or dic['filename'].endswith(".cmd"):
+            mode[3] = 'x'
+            mode[6] = 'x'
+            mode[9] = 'x'
 
-class FileStatus(BaseStatus):
+        dic['filemode'] = '%s%s%s%s%s%s%s%s%s%s' % tuple(mode)
+        return dic
+
+    def __call__(self, cwd):
+        import win32api
+        import win32con
+        return {f[8]: self.stat(cwd, f) for f in win32api.FindFiles(os.path.join(cwd, '*')) if f[8] != '.'}
+
+class FileStatus(object):
     def stat(self, abspath):
         dic = {}
         dic['abspath'] = abspath
@@ -64,17 +93,22 @@ class FileStatus(BaseStatus):
             logging.exception(e)
         return dic
 
-    def __call__(self):
-        lis = sorted(os.listdir(self.cwd), key=str.lower)
-        lis.insert(0, '..')
-        return (self.stat(os.path.join(self.cwd, f)) for f in lis)
+    def strftime(self, time):
+        return datetime.datetime.strftime(
+                datetime.datetime.utcfromtimestamp(time),
+                '%Y/%m/%d %H:%M:%S')
 
+    def __call__(self, cwd):
+        lis = sorted(os.listdir(cwd), key=str.lower)
+        lis.insert(0, '..')
+        return {f: self.stat(os.path.join(cwd, f)) for f in lis}
 
 class BaseFiler(object):
     def __init__(self, path=os.getcwd()):
         self.cwd_history = list()
         self._cwd = os.getcwd()
         self.chdir(path)
+        self.status = GitStatus(FileStatus())
 
     def get_cwd(self):
         return self._cwd
@@ -95,87 +129,12 @@ class BaseFiler(object):
         path = os.path.normpath(os.path.expandvars(os.path.expanduser(path)))
         return path
 
-    def strftime(self, time):
-        #return str(datetime.datetime.utcfromtimestamp(time))
-        return datetime.datetime.strftime(datetime.datetime.utcfromtimestamp(time), '%Y/%m/%d %H:%M:%S')
-
-    def stat(self, abspath):
-        dic = {}
-        dic['abspath'] = abspath
-        dic['filename'] = os.path.basename(abspath)
-        try:
-            st = os.lstat(abspath)
-            dic['filemode'] = stat.filemode(st.st_mode)
-            dic['st_mode'] = st.st_mode
-            dic['st_ino'] = st.st_ino
-            dic['st_dev'] = st.st_dev
-            dic['st_nlink'] = st.st_nlink
-            dic['st_uid'] = st.st_uid
-            dic['st_gid'] = st.st_gid
-            dic['st_size'] = str(st.st_size)
-            dic['st_atime'] = self.strftime(st.st_atime)
-            dic['st_mtime'] = self.strftime(st.st_mtime)
-            dic['st_ctime'] = self.strftime(st.st_ctime)
-        except Exception as e:
-            logging.exception(e)
-        return dic
-
-    def ls_win(self):
-        def create_stat(lis):
-            dic = {}
-            dic['filename'] = lis[8]
-            dic['abspath'] = os.path.join(self.cwd, dic['filename'])
-            dic['st_size'] = str((int(lis[4]) << 32) + int(lis[5]))
-            dic['st_atime'] = datetime.datetime.strftime(lis[2], '%Y/%m/%d %H:%M:%S')
-            dic['st_mtime'] = datetime.datetime.strftime(lis[3], '%Y/%m/%d %H:%M:%S')
-            mode = ['-', 'r', 'w', '-', 'r', 'w', '-', 'r', 'w', '-', ]
-            fileattr = lis[0]
-            if fileattr & win32con.FILE_ATTRIBUTE_DIRECTORY:
-                mode[0] = 'd'
-                mode[3] = 'x'
-                mode[6] = 'x'
-                mode[9] = 'x'
-            if fileattr & win32con.FILE_ATTRIBUTE_REPARSE_POINT:
-                mode[0] = 'l'
-            if fileattr & win32con.FILE_ATTRIBUTE_READONLY:
-                mode[2] = '-'
-                mode[5] = '-'
-                mode[8] = '-'
-            if dic['filename'].endswith(".exe") or dic['filename'].endswith(".cmd"):
-                mode[3] = 'x'
-                mode[6] = 'x'
-                mode[9] = 'x'
-
-            dic['filemode'] = '%s%s%s%s%s%s%s%s%s%s' % tuple(mode)
-            return dic
-
-        import win32api
-        import win32con
-        return (create_stat(f) for f in sorted(win32api.FindFiles(os.path.join(self.cwd, '*')),
-                                               key=lambda x: x[8]) if f[8] != '.')
-
-    def ls_common(self):
-        lis = sorted(os.listdir(self.cwd), key=str.lower)
-        lis.insert(0, '..')
-        return (self.stat(os.path.join(self.cwd, f)) for f in lis)
-
     def ls(self):
-        if 'Windows' == platform.system():
-            try:
-                return self.ls_win()
-            except ImportError:
-                return self.ls_common()
-        else:
-            return self.ls_common()
+        return self.status(self.cwd).values()
 
     def open_assoc(self, path):
         abspath = self._abspath(path)
-        if 'Windows' == platform.system():
-            if os.path.isdir(abspath):
-                subprocess.Popen(["explorer", abspath], shell=True )
-            else:
-                subprocess.Popen([abspath], shell=True )
-        elif 'Darwin' == platform.system():
+        if 'Darwin' == platform.system():
             subprocess.Popen(['open', abspath])
 
     def chdir(self, path):
@@ -183,17 +142,7 @@ class BaseFiler(object):
         if os.path.isdir(abspath):
             self.cwd_history.append(self._cwd)
             self._cwd = abspath
-            return self._cwd
-        else:
-            root, ext = os.path.splitext(path)
-            if ext == '.lnk' and 'Windows' == platform.system():
-                import win32com.client
-                shell = win32com.client.Dispatch("WScript.Shell")
-                shortcut = shell.CreateShortCut(abspath)
-                if os.path.isdir(shortcut.Targetpath):
-                    self.cwd_history.append(self._cwd)
-                    self._cwd = shortcut.Targetpath
-                    return self._cwd
+        return self._cwd
 
 
     def popd(self):
@@ -256,6 +205,35 @@ class BaseFiler(object):
             dstpath = os.path.join(dstpath, os.path.basename(srcpath))
         os.symlink(srcpath, dstpath)
 
+class WindowsFiler(BaseFiler):
+    def __init__(self, path=os.getcwd()):
+        BaseFiler.__init__(self, path)
+        self.status = GitStatus(WinFileStatus())
+
+    def open_assoc(self, path):
+        abspath = self._abspath(path)
+        if os.path.isdir(abspath):
+            subprocess.Popen(["explorer", abspath], shell=True )
+        else:
+            subprocess.Popen([abspath], shell=True )
+
+    def chdir(self, path):
+        abspath = self._abspath(path)
+        if os.path.isdir(abspath):
+            self.cwd_history.append(self._cwd)
+            self._cwd = abspath
+            return self._cwd
+        else:
+            _, ext = os.path.splitext(path)
+            if ext == '.lnk':
+                import win32com.client
+                shell = win32com.client.Dispatch("WScript.Shell")
+                shortcut = shell.CreateShortCut(abspath)
+                if os.path.isdir(shortcut.Targetpath):
+                    self.cwd_history.append(self._cwd)
+                    self._cwd = shortcut.Targetpath
+                    return self._cwd
+
     def create_shortcut(self, srcpath, dstpath):
         import win32com.client
         srcpath = self._abspath(srcpath)
@@ -270,9 +248,10 @@ class BaseFiler(object):
         shortcut.Targetpath = srcpath
         shortcut.Save()
 
+
 def main():
-    filer = BaseFiler()
-    print(filer.ls())
+    pass
+
 
 if __name__ == '__main__':
     main()

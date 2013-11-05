@@ -39,6 +39,7 @@ class GitStatus(DecorateStatus):
 
 class WinFileStatus(object):
     def stat(self, cwd, lis):
+        import win32con
         dic = {}
         dic['filename'] = lis[8]
         dic['abspath'] = os.path.join(cwd, dic['filename'])
@@ -68,7 +69,6 @@ class WinFileStatus(object):
 
     def __call__(self, cwd):
         import win32api
-        import win32con
         return {f[8]: self.stat(cwd, f) for f in win32api.FindFiles(os.path.join(cwd, '*')) if f[8] != '.'}
 
 class FileStatus(object):

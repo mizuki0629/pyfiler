@@ -14,10 +14,21 @@ import os.path
 import stat
 
 # TODO まとめる
-horizontal_header = ['s', 'filename', 'git_wk', 'git_idx', 'filemode', 'st_mtime', 'st_size', ]
+header = [
+        ['s', '', (QtGui.QHeaderView.Fixed, 15),],
+        ['filename', 'filename', (QtGui.QHeaderView.Stretch, 0),],
+        ['git_wk', 'w', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['git_idx', 'i', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['filemode', 'filemode', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['st_mtime', '更新時間', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['st_size', 'サイズ', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ]
+
 header_resizemode = [
         (QtGui.QHeaderView.Fixed, 15),
         (QtGui.QHeaderView.Stretch, 0),
+        (QtGui.QHeaderView.ResizeToContents, 0),
+        (QtGui.QHeaderView.ResizeToContents, 0),
         (QtGui.QHeaderView.ResizeToContents, 0),
         (QtGui.QHeaderView.ResizeToContents, 0),
         (QtGui.QHeaderView.ResizeToContents, 0),
@@ -106,7 +117,7 @@ class FilerWidget(QtGui.QWidget):
                 # 選択時
                 val = '*' if viewmodel.files[i].isselect else ' '
                 color = self.textcolor(viewmodel.files[i])
-                for j, col in enumerate(horizontal_header):
+                for j, col in enumerate(map(lambda x: x[0], header)):
                     if col == 's':
                         self.tablewidget.setItem(i, j, QtGui.QTableWidgetItem(val))
                     item = self.tablewidget.item(i, j)
@@ -115,18 +126,18 @@ class FilerWidget(QtGui.QWidget):
         else:
             self.cwdline.setText(viewmodel.cwd())
 
-            self.tablewidget.setColumnCount(len(horizontal_header))
+            self.tablewidget.setColumnCount(len(header))
             self.tablewidget.setRowCount(len(viewmodel.files))
 
-            for i, m in enumerate(header_resizemode):
+            for i, m in enumerate(map(lambda x: x[2], header)):
                 self.tablewidget.horizontalHeader().setResizeMode(i, m[0])
                 self.tablewidget.setColumnWidth(i, m[1])
 
-            self.tablewidget.setHorizontalHeaderLabels(horizontal_header)
+            self.tablewidget.setHorizontalHeaderLabels(list(map(lambda x: x[1], header)))
             self.tablewidget.verticalHeader().setVisible(False)
 
             for i, f in enumerate(viewmodel.files):
-                for j, col in enumerate(horizontal_header):
+                for j, col in enumerate(map(lambda x: x[0], header)):
                     item = None
                     if col in f.state:
                         if col == 'filename':

@@ -90,7 +90,7 @@ class Pain(Subject):
         def reload_after_original_function(self, *args, **kwargs):
             prev_cwd = self.cwd()
             result = func(self, *args, **kwargs)
-            self.files = sorted(self.filer.ls(), key=lambda x: x['filename'])
+            self.files = list(map(lambda x: File(x), sorted(self.filer.ls(), key=lambda x: x['filename'])))
             # TODO カーソルも履歴をとって設定すること
             if self.cwd() != prev_cwd:
                 self.cursor = 0

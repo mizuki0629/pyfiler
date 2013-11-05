@@ -33,9 +33,10 @@ class GitStatus(DecorateStatus):
     def status(self, cwd):
         ps = subprocess.Popen(['git', 'status', '-s'],
                 cwd=cwd,
-                stdout=subprocess.PIPE)
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
         ps.wait()
-        return { gs[3:]: {'git_wk':gs[0], 'git_idx':gs[1]} for gs in map(lambda x:x.decode(encoding='utf-8').rstrip('\n'), ps.stdout.readlines())}
+        return { gs[3:]: {'git_idx':gs[0], 'git_wk':gs[1]} for gs in map(lambda x:x.decode(encoding='utf-8').rstrip('\n'), ps.stdout.readlines())}
 
 class WinFileStatus(object):
     def stat(self, cwd, lis):
@@ -148,7 +149,6 @@ class BaseFiler(object):
     def popd(self):
         if len(self.cwd_history) > 0:
             self._cwd = self.cwd_history.pop()
-            print(self._cwd)
 
     def rename(self, src, dst):
         abs_src = self._abspath(src)

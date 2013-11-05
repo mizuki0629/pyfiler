@@ -1,5 +1,6 @@
 ; vim:set filetype=scheme foldmethod=marker:
 (require "filer")
+(require "git")
 (require-python "logging")
 
 (cond

@@ -13,30 +13,18 @@ import lispy
 import os.path
 import stat
 
-# TODO まとめる
 header = [
         ['s', '', (QtGui.QHeaderView.Fixed, 15),],
         ['filename', 'filename', (QtGui.QHeaderView.Stretch, 0),],
-        ['git_wk', 'w', (QtGui.QHeaderView.ResizeToContents, 0),],
         ['git_idx', 'i', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['git_wk', 'w', (QtGui.QHeaderView.ResizeToContents, 0),],
         ['filemode', 'filemode', (QtGui.QHeaderView.ResizeToContents, 0),],
         ['st_mtime', '更新時間', (QtGui.QHeaderView.ResizeToContents, 0),],
         ['st_size', 'サイズ', (QtGui.QHeaderView.ResizeToContents, 0),],
         ]
 
-header_resizemode = [
-        (QtGui.QHeaderView.Fixed, 15),
-        (QtGui.QHeaderView.Stretch, 0),
-        (QtGui.QHeaderView.ResizeToContents, 0),
-        (QtGui.QHeaderView.ResizeToContents, 0),
-        (QtGui.QHeaderView.ResizeToContents, 0),
-        (QtGui.QHeaderView.ResizeToContents, 0),
-        (QtGui.QHeaderView.ResizeToContents, 0),
-        ]
-
-# TODO 適当なところに移動させる
-SUFFIXES = {1000: ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
-            1024: ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']}
+SUFFIXES = {1000: [' B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+            1024: ['  B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']}
 
 def approximate_size(size, a_kilobyte_is_1024_bytes=True):
     '''Convert a file size to human-readable form.
@@ -54,9 +42,9 @@ def approximate_size(size, a_kilobyte_is_1024_bytes=True):
 
     multiple = 1024 if a_kilobyte_is_1024_bytes else 1000
     for suffix in SUFFIXES[multiple]:
-        size /= multiple
         if size < multiple:
             return '{0:.1f} {1}'.format(size, suffix)
+        size /= multiple
 
     raise ValueError('number too large')
 
@@ -88,11 +76,17 @@ class FilerWidget(QtGui.QWidget):
         tablewidget.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         tablewidget.setShowGrid(False)
         tablewidget.setGridStyle(QtCore.Qt.NoPen)
+        tablewidget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
 
         self.update(viewmodel, Subject.Event('update'))
 
-    def textcolor(self, file):
+    def textcolor(self, file, col):
         try:
+            if col == 'git_wk':
+                return QtGui.QColor(255, 0, 0)
+            if col == 'git_idx':
+                return QtGui.QColor(0, 255, 0)
+
             if file.isselect:
                 return QtGui.QColor(150, 150, 0)
             # directory
@@ -116,11 +110,11 @@ class FilerWidget(QtGui.QWidget):
             for i in event.opt['indexes']:
                 # 選択時
                 val = '*' if viewmodel.files[i].isselect else ' '
-                color = self.textcolor(viewmodel.files[i])
                 for j, col in enumerate(map(lambda x: x[0], header)):
                     if col == 's':
                         self.tablewidget.setItem(i, j, QtGui.QTableWidgetItem(val))
                     item = self.tablewidget.item(i, j)
+                    color = self.textcolor(viewmodel.files[i], col)
                     if item is not None:
                         item.setTextColor(color)
         else:
@@ -154,7 +148,7 @@ class FilerWidget(QtGui.QWidget):
                         else:
                             item = QtGui.QTableWidgetItem(f.state[col])
 
-                        item.setTextColor(self.textcolor(f))
+                        item.setTextColor(self.textcolor(f, col))
                     self.tablewidget.setItem(i, j, item)
             self.tablewidget.selectRow(viewmodel.cursor)
             self.tablewidget.resizeRowsToContents()

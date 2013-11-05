@@ -64,7 +64,7 @@ def sh_call(cwd, args):
     with subprocess.Popen(args, cwd=cwd,
             stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=isshell) as proc:
         rcd = proc.wait()
-        return proc.stdout.read().decode(encoding=encoding)
+        return [proc.stdout.read().decode(encoding=encoding), proc.stderr.read().decode(encoding=encoding)]
 
 @Command_
 def sh_popen(cwd, args):

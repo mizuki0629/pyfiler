@@ -2,6 +2,19 @@ import lispy
 import logging
 import subprocess
 import platform
+from multiprocessing import Process
+
+def AsyncCommand(func):
+    def wrapped(*args):
+        tmp = list(args)
+        tmp.append(view)
+        tmp.append(model)
+        p = Process(target=func, args=tmp)
+        view.cw.set_progress(True)
+        p.start()
+        p.join()
+        #view.cw.set_progress(False)
+    return wrapped
 
 def Command(func):
     def wrapped(*args):

@@ -214,15 +214,6 @@
 		(else nil)))
 ; }}}
 
-; editor {{{
-(define *editor*
-  (cond
-	((windows?) '("C:/Program Files (x86)/vim74-kaoriya-win64/gvim.exe" "-p" "--remote-tab-silent"))
-	((mac?) '("open" "-a" "MacVim"))))
-(define (open-editor)
-  (sh-popen (pwd) (append *editor* (list (file-name (cursor-file))))))
-; }}}
-
 ; file 関数{{{
 (define (file-state st file)
   (method::get (attr::state file) st))
@@ -251,25 +242,25 @@
   (method::join delimiter lis))
   ;(reduce (lambda (x y) (+ x delimiter y)) (car lis) (cdr lis)))
 
-(require-python "tkinter")
-(define (set-clipboard text)
-  (cond ((windows?) (begin
-					 (method::clipboard_clear (tkinter::Text))
-					 (method::clipboard_append (tkinter::Text) text)))
-		(else *undef*)))
+;(require-python "tkinter")
+;(define (set-clipboard text)
+  ;(cond ((windows?) (begin
+					 ;(method::clipboard_clear (tkinter::Text))
+					 ;(method::clipboard_append (tkinter::Text) text)))
+		;(else *undef*)))
 
-(define (clipboard)
-  (cond ((windows?) (method::clipboard_get (tkinter::Text)))
-		(else *undef*)))
+;(define (clipboard)
+  ;(cond ((windows?) (method::clipboard_get (tkinter::Text)))
+		;(else *undef*)))
 
-(define (set-clipboard-filename)
-  (set-clipboard
-	  (string-join "\n" (map file-name (select-or-cursor-files)))))
+;(define (set-clipboard-filename)
+  ;(set-clipboard
+	  ;(string-join "\n" (map file-name (select-or-cursor-files)))))
 
-(define (set-clipboard-filepath)
-  (set-clipboard
-	(string-join "\n" (map (bind1st file-state "abspath") (select-or-cursor-files)))))
-; }}}
+;(define (set-clipboard-filepath)
+  ;(set-clipboard
+	;(string-join "\n" (map (bind1st file-state "abspath") (select-or-cursor-files)))))
+;; }}}
 
 ; TODO Safeモードを実装すること
 (define (pain-to-pain func files)

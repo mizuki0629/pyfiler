@@ -1,15 +1,17 @@
 #! /usr/bin/env python
 # coding=utf-8
 
-import logging
-from base_filer import BaseFiler, WindowsFiler
-import os.path
-import lispy
 import command
+import fileutil
+import history
 import imp
 import keymap
-import re
+import lispy
+import logging
+import os
+import os.path
 import platform
+import re
 
 
 class Subject(object):
@@ -50,27 +52,17 @@ class File(object):
     def __repr__(self):
         return self.state['filename'] + ' : ' + str(self.isselect)
 
-# TODO 使わないなら捨てること
-def nop_filter(*args, **kwargs):
-    def filter_imp(file):
-        return True
-    return filter_imp
-
 class Pain(Subject):
-    def __init__(self, filer=BaseFiler):
+    def __init__(self):
         Subject.__init__(self)
-        self.filter = nop_filter
-        if 'Windows' == platform.system():
-            self.filer = WindowsFiler()
-        else:
-            self.filer = filer()
-        self.filer_args = []
+        self._cwd = os.getcwd()
         self.files = []
         self.cursor = 0
         self.reload()
         # TODO painに依存しないようにすること
         self.cursor_bak = None
         self.search_str = None
+        self.cwd_history = history.History(self._cwd)
 
     def _up_cursor(self):
         if self.cursor > 0:
@@ -90,7 +82,8 @@ class Pain(Subject):
         def reload_after_original_function(self, *args, **kwargs):
             prev_cwd = self.cwd()
             result = func(self, *args, **kwargs)
-            self.files = list(map(lambda x: File(x), sorted(self.filer.ls(), key=lambda x: x['filename'])))
+            self.files = list(map(lambda x: File(x), fileutil.status(self.cwd())))
+            #self.files = list(map(lambda x: File(x), sorted(fileutil.status(self.cwd()), key=lambda x: x['filename'])))
             # TODO カーソルも履歴をとって設定すること
             if self.cwd() != prev_cwd:
                 self.cursor = 0
@@ -123,33 +116,54 @@ class Pain(Subject):
     @Notify('chdir')
     @Reload
     def pushd(self, path):
-        self.filer.pushd(path)
+        self.chdir(path)
 
     @Notify('chdir')
     @Reload
     def popd(self):
-        self.filer.popd()
+        if self.cwd_history.has_prev():
+            abspath = self._abspath(self.cwd_history.prev())
+            if os.path.isdir(abspath):
+                self._cwd = abspath
 
     @Notify('chdir')
     @Reload
     def chdir_parent(self):
-        self.filer.chdir('../')
+        self.chdir('../')
 
     def open_assoc(self):
-        self.filer.open_assoc(self.cursor_file_abspath)
+        fileutil.open_assoc(self.cursor_file_abspath)
 
     @Notify('chdir')
     @Reload
     def chdir(self, path=None):
         if path is None:
             path = self.cursor_file_abspath
-        self.filer.chdir(path)
+        abspath = self._abspath(path)
+        if os.path.isdir(abspath):
+            self._cwd = abspath
+            self.cwd_history.push(self._cwd)
+
+    def _abspath(self, path):
+        if os.path.isabs(path) and os.path.exists(path):
+            return path
+
+        tmp = os.path.normpath(os.path.join(self._cwd, path))
+        if os.path.exists(tmp):
+            return  tmp
+
+        tmp = os.path.normpath(os.path.expandvars(tmp))
+        if os.path.exists(tmp):
+            return  tmp
+
+        path = os.path.normpath(os.path.expandvars(os.path.expanduser(path)))
+        return path
 
     def cwd(self):
-        return self.filer.cwd
+        return self._cwd
 
     def cwd_history(self):
-        return self.filer.cwd_history
+        return self.cwd_history
 
     @Notify('cursor')
     def toggle_isselet_up(self):

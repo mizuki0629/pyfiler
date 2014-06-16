@@ -16,11 +16,11 @@ import stat
 header = [
         ['s', '', (QtGui.QHeaderView.Fixed, 15),],
         ['filename', 'filename', (QtGui.QHeaderView.Stretch, 0),],
-        ['git_idx', 'i', (QtGui.QHeaderView.ResizeToContents, 0),],
-        ['git_wk', 'w', (QtGui.QHeaderView.ResizeToContents, 0),],
-        ['filemode', 'filemode', (QtGui.QHeaderView.ResizeToContents, 0),],
-        ['st_mtime', '更新時間', (QtGui.QHeaderView.ResizeToContents, 0),],
-        ['st_size', 'サイズ', (QtGui.QHeaderView.ResizeToContents, 0),],
+        #['git_idx', 'i', (QtGui.QHeaderView.ResizeToContents, 0),],
+        #['git_wk', 'w', (QtGui.QHeaderView.ResizeToContents, 0),],
+        #['filemode', 'filemode', (QtGui.QHeaderView.ResizeToContents, 0),],
+        #['st_mtime', '更新時間', (QtGui.QHeaderView.ResizeToContents, 0),],
+        #['st_size', 'サイズ', (QtGui.QHeaderView.ResizeToContents, 0),],
         ]
 
 SUFFIXES = {1000: [' B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
@@ -254,6 +254,9 @@ class CentralWidget(QtGui.QWidget):
         if event.kind == 'mode':
             self.modeLable.setText(viewmodel.mode.upper())
 
+    def set_progress(self, is_on):
+        self.progressbar.setVisible(is_on)
+
     def setup_ui(self, viewmodel):
         panel = QtGui.QVBoxLayout()
         panel.setContentsMargins(0, 0, 0, 0)
@@ -272,8 +275,22 @@ class CentralWidget(QtGui.QWidget):
         panel2.setSpacing(0)
         self.modeLable = QtGui.QLabel(viewmodel.mode.upper())
         self.commandLine = CommandLineWidget(viewmodel)
+        self.progressbar = QtGui.QProgressBar()
+        self.progressbar.setStyleSheet("""
+        QProgressBar {
+            text-align: center;
+        }
+        QProgressBar::chunk {
+            width: 10px;
+        }
+        """)
+        self.progressbar.setFormat('')
+        self.progressbar.setRange(0, 0)
+        self.progressbar.setMaximumWidth(100)
+        self.set_progress(False)
         panel2.addWidget(self.modeLable)
         panel2.addWidget(self.commandLine)
+        panel2.addWidget(self.progressbar)
         panel.addLayout(panel2)
 
 

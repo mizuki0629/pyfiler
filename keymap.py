@@ -5,6 +5,9 @@ import lispy
 import logging
 import platform
 from PyQt4.QtCore import Qt
+import types
+import command
+import time
 
 normal_map = {}
 lispy.global_env.update({'normal-map':normal_map})
@@ -488,11 +491,18 @@ def do_keymap(kmap, key):
     try:
         symbol = kmap.get(key)
         if symbol is not None:
-            logging.debug('(' + lispy.to_string(symbol) + ')')
-            lispy.eval([symbol])
-            return True
+            if type(symbol) is types.FunctionType:
+                symbol()
+                return True
+            else:
+                logging.debug('(' + lispy.to_string(symbol) + ')')
+                lispy.eval([symbol])
+                return True
         else:
             return False
     except Exception as e:
         logging.exception(e)
 
+def hoge(*args):
+    time.sleep(10)
+add_keymap(normal_map, "i", command.AsyncCommand(hoge))

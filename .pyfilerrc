@@ -3,9 +3,9 @@
 (require "git")
 (require-python "logging")
 
-(cond
-  ((filer::windows?) (filer::set-default-font "Migu 1M" 10))
-  ((filer::mac?) (filer::set-default-font "Monaco")))
+;(cond
+  ;((filer::windows?) (filer::set-default-font "Migu 1M" 10))
+  ;((filer::mac?) (filer::set-default-font "Monaco")))
 
 (filer::set-window-size 1100 600)
 (filer::set-window-title "pyfiler")
@@ -32,7 +32,6 @@
 			   ("a" filer::select-all)
 			   ("c" filer::copy-files)
 			   ("d" filer::remove-files)
-			   ("e" filer::open-editor)
 			   ("g" filer::cursor-first)
 			   ("h" filer::cd-parent)
 			   ("j" filer::cursor-down)
@@ -43,7 +42,7 @@
 			   ("o" filer::cd-other-to-current)
 			   ("r" filer::reload-pain)
 			   ("t" filer::tabnew-pwd)
-			   ("y" filer::set-clipboard-filename)
+			   ;("y" filer::set-clipboard-filename)
 			   ("Return" filer::open-assoc)
 			   ("Semicolon" filer::command-mode)
 			   ("Slash" filer::search-mode)
@@ -63,7 +62,7 @@
 			   ("S-n" filer::search-prev)
 			   ("S-r" filer::reload-config)
 			   ("S-t" filer::tabnew)
-			   ("S-y" filer::set-clipboard-filepath)
+			   ;("S-y" filer::set-clipboard-filepath)
 			   ("S-Return" filer::open-my-assoc)
 			   ("S-Space" filer::select-up)
 			   ))

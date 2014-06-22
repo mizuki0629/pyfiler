@@ -55,20 +55,26 @@ class File(object):
 class Pain(Subject):
     def __init__(self):
         Subject.__init__(self)
-        self._cwd = os.getcwd()
         self.files = []
-        self.cursor = 0
-        # TODO painに依存しないようにすること
+        self.state = (os.getcwd(), 0)
+        self.hisotry = history.History(self.state)
         self.cursor_bak = None
         self.search_str = None
-        self.cwd_history = history.History((self._cwd, self.cursor))
         self.reload()
+
+    @property
+    def state(self):
+        return (self._cwd, self.cursor)
+    @state.setter
+    def state(self, val):
+        self._cwd, self.cursor = val
 
     @property
     def cursor(self):
         return self._cursor
 
     @cursor.setter
+    @Notify('cursor')
     def cursor(self, val):
         if val > len(self.files) - 1:
            val = len(self.files) - 1
@@ -84,26 +90,20 @@ class Pain(Subject):
 
     def Reload(func):
         def reload_after_original_function(self, *args, **kwargs):
-            prev_cwd = self.cwd()
             result = func(self, *args, **kwargs)
             self.files = list(map(lambda x: File(x), sorted(fileutil.status(self.cwd()), key=lambda x: x['filename'])))
-            print(self.cwd_history)
             return result
         return reload_after_original_function
 
-    @Notify('cursor')
     def cursor_up(self):
         self.cursor = self.cursor - 1
 
-    @Notify('cursor')
     def cursor_down(self):
         self.cursor = self.cursor + 1
 
-    @Notify('cursor')
     def cursor_first(self):
         self.cursor = 0
 
-    @Notify('cursor')
     def cursor_last(self):
         self.cursor = len(self.files) - 1
 
@@ -112,24 +112,16 @@ class Pain(Subject):
     def reload(self):
         pass
 
-    @Notify('chdir')
-    @Reload
     def pushd(self, path):
         self.chdir(path)
 
     @Notify('chdir')
     @Reload
     def popd(self):
-        self.cwd_history.current = (self._cwd, self.cursor)
-        if self.cwd_history.has_prev():
-            cwd, cursor = self.cwd_history.prev()
-            abspath = self._abspath(cwd)
-            if os.path.isdir(abspath):
-                self._cwd = abspath
-                self.cursor = cursor
+        if self.hisotry.has_prev():
+            self.hisotry.current = self.state
+            self.state = self.hisotry.prev()
 
-    @Notify('chdir')
-    @Reload
     def chdir_parent(self):
         self.chdir('../')
 
@@ -140,12 +132,13 @@ class Pain(Subject):
     @Reload
     def chdir(self, path=None):
         if path is None:
-            path = self.cursor_file_abspath
-        abspath = self._abspath(path)
+            abspath  = self.cursor_file_abspath
+        else:
+            abspath = self._abspath(path)
         if os.path.isdir(abspath):
-            self._cwd = abspath
-            self.cursor = 0
-            self.cwd_history.push((self._cwd, self.cursor))
+            self.hisotry.current = self.state
+            self.state = (abspath, 0)
+            self.hisotry.push(self.state)
 
     def _abspath(self, path):
         if os.path.isabs(path) and os.path.exists(path):
@@ -165,13 +158,11 @@ class Pain(Subject):
     def cwd(self):
         return self._cwd
 
-    @Notify('cursor')
     def toggle_isselet_up(self):
         self._toggle_isselet(self.cursor)
         self.notify(Subject.Event('select', indexes=[self.cursor]))
         self.cursor = self.cursor - 1
 
-    @Notify('cursor')
     def toggle_isselet_down(self):
         self._toggle_isselet(self.cursor)
         self.notify(Subject.Event('select', indexes=[self.cursor]))
@@ -196,7 +187,6 @@ class Pain(Subject):
 
        return l[y:] + l[:y]
 
-    @Notify('cursor')
     def search(self, sstr=None):
         if sstr is None:
             if self.search_str is None:
@@ -212,7 +202,6 @@ class Pain(Subject):
                 self.cursor = index
                 return
 
-    @Notify('cursor')
     def rsearch(self, sstr=None):
         if sstr is None:
             if self.search_str is None:
@@ -229,13 +218,11 @@ class Pain(Subject):
                 return
 
 
-    @Notify('cursor')
     def search_cancel(self):
         if self.cursor_bak is not None:
             self.cursor = self.cursor_bak
             self.cursor_bak = None
 
-    @Notify('cursor')
     def search_enter(self, sstr):
         self.cursor_bak = None
         self.search_str = sstr

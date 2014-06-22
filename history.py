@@ -35,6 +35,9 @@ class History(object):
     @property
     def current(self):
         return self._list[self._index]
+    @current.setter
+    def current(self, val):
+        self._list[self._index] = val
 
     @property
     def index(self):

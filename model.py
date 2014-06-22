@@ -120,6 +120,7 @@ class Pain(Subject):
     @Notify('chdir')
     @Reload
     def popd(self):
+        self.cwd_history.current = (self._cwd, self.cursor)
         if self.cwd_history.has_prev():
             cwd, cursor = self.cwd_history.prev()
             abspath = self._abspath(cwd)
@@ -142,9 +143,9 @@ class Pain(Subject):
             path = self.cursor_file_abspath
         abspath = self._abspath(path)
         if os.path.isdir(abspath):
-            self.cwd_history.push((self._cwd, self.cursor))
             self._cwd = abspath
             self.cursor = 0
+            self.cwd_history.push((self._cwd, self.cursor))
 
     def _abspath(self, path):
         if os.path.isabs(path) and os.path.exists(path):

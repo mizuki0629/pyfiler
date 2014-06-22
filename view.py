@@ -16,11 +16,11 @@ import stat
 header = [
         ['s', '', (QtGui.QHeaderView.Fixed, 15),],
         ['filename', 'filename', (QtGui.QHeaderView.Stretch, 0),],
-        #['git_idx', 'i', (QtGui.QHeaderView.ResizeToContents, 0),],
-        #['git_wk', 'w', (QtGui.QHeaderView.ResizeToContents, 0),],
-        #['filemode', 'filemode', (QtGui.QHeaderView.ResizeToContents, 0),],
-        #['st_mtime', '更新時間', (QtGui.QHeaderView.ResizeToContents, 0),],
-        #['st_size', 'サイズ', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['git_idx', 'i', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['git_wk', 'w', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['filemode', 'filemode', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['st_mtime', '更新時間', (QtGui.QHeaderView.ResizeToContents, 0),],
+        ['st_size', 'サイズ', (QtGui.QHeaderView.ResizeToContents, 0),],
         ]
 
 SUFFIXES = {1000: [' B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],

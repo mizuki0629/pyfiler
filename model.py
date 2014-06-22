@@ -58,19 +58,23 @@ class Pain(Subject):
         self._cwd = os.getcwd()
         self.files = []
         self.cursor = 0
-        self.reload()
         # TODO painに依存しないようにすること
         self.cursor_bak = None
         self.search_str = None
-        self.cwd_history = history.History(self._cwd)
+        self.cwd_history = history.History((self._cwd, self.cursor))
+        self.reload()
 
-    def _up_cursor(self):
-        if self.cursor > 0:
-            self.cursor = self.cursor - 1
+    @property
+    def cursor(self):
+        return self._cursor
 
-    def _down_cursor(self):
-        if self.cursor < len(self.files) - 1:
-            self.cursor = self.cursor + 1
+    @cursor.setter
+    def cursor(self, val):
+        if val > len(self.files) - 1:
+           val = len(self.files) - 1
+        if val < 0:
+           val = 0
+        self._cursor = val
 
     def get_cursor_file(self):
         return self.files[self.cursor]
@@ -82,23 +86,18 @@ class Pain(Subject):
         def reload_after_original_function(self, *args, **kwargs):
             prev_cwd = self.cwd()
             result = func(self, *args, **kwargs)
-            self.files = list(map(lambda x: File(x), fileutil.status(self.cwd())))
-            #self.files = list(map(lambda x: File(x), sorted(fileutil.status(self.cwd()), key=lambda x: x['filename'])))
-            # TODO カーソルも履歴をとって設定すること
-            if self.cwd() != prev_cwd:
-                self.cursor = 0
-            else:
-                self.cursor = self.cursor if self.cursor < len(self.files) else len(self.files) - 1
+            self.files = list(map(lambda x: File(x), sorted(fileutil.status(self.cwd()), key=lambda x: x['filename'])))
+            print(self.cwd_history)
             return result
         return reload_after_original_function
 
     @Notify('cursor')
     def cursor_up(self):
-        self._up_cursor()
+        self.cursor = self.cursor - 1
 
     @Notify('cursor')
     def cursor_down(self):
-        self._down_cursor()
+        self.cursor = self.cursor + 1
 
     @Notify('cursor')
     def cursor_first(self):
@@ -122,9 +121,11 @@ class Pain(Subject):
     @Reload
     def popd(self):
         if self.cwd_history.has_prev():
-            abspath = self._abspath(self.cwd_history.prev())
+            cwd, cursor = self.cwd_history.prev()
+            abspath = self._abspath(cwd)
             if os.path.isdir(abspath):
                 self._cwd = abspath
+                self.cursor = cursor
 
     @Notify('chdir')
     @Reload
@@ -141,8 +142,9 @@ class Pain(Subject):
             path = self.cursor_file_abspath
         abspath = self._abspath(path)
         if os.path.isdir(abspath):
+            self.cwd_history.push((self._cwd, self.cursor))
             self._cwd = abspath
-            self.cwd_history.push(self._cwd)
+            self.cursor = 0
 
     def _abspath(self, path):
         if os.path.isabs(path) and os.path.exists(path):
@@ -162,20 +164,17 @@ class Pain(Subject):
     def cwd(self):
         return self._cwd
 
-    def cwd_history(self):
-        return self.cwd_history
-
     @Notify('cursor')
     def toggle_isselet_up(self):
         self._toggle_isselet(self.cursor)
         self.notify(Subject.Event('select', indexes=[self.cursor]))
-        self._up_cursor()
+        self.cursor = self.cursor - 1
 
     @Notify('cursor')
     def toggle_isselet_down(self):
         self._toggle_isselet(self.cursor)
         self.notify(Subject.Event('select', indexes=[self.cursor]))
-        self._down_cursor()
+        self.cursor = self.cursor + 1
 
     def _toggle_isselet(self, index):
         self.files[index].isselect = self.files[index].isselect ^ True

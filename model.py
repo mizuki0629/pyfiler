@@ -300,6 +300,22 @@ class Model(Subject):
         self.addTab(Tab())
         self.mode = NORMAL_MODE
 
+    @property
+    def tab(self):
+        return self.currentTab()
+
+    @property
+    def pain(self):
+        return self.currentTab().get_current()
+
+    @property
+    def cursorfile(self):
+        return self.currentTab().get_current().cursor_file
+
+    @property
+    def selects(self):
+        return self.currentTab().get_current().cursor_file
+
     def get_mode(self):
         return self._mode
 

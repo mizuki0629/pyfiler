@@ -1,0 +1,86 @@
+# pyfiler
+
+## コマンドに欲しい機能
+* コマンドメソッドを作ってカスタマイズできる
+	コマンドを記述するファイルは複数用意できるようにする
+	どのようにするか検討が必要
+	その他のイベントについても外部ファイルからカスタマイズできるようにする
+* コマンドはshと同じ形式で入力する。
+	shlexを使う
+* shのコマンドをそのまま使えるといい
+	案1.コマンドがfilerになかったらshに送る
+		最終的なエラーがshのエラーになってしまう？
+	案2.先頭に!をつける
+		打ち込むのがめんどくさい?  ";"を":"で打ち込むような仕組みにすればいい
+* shのコマンドに選択しているファイルなどを渡せる
+	選択しているファイルは"@l"とか"@r"とか特殊な文字列で指定する。
+* コマンドの終了時にリロードを行う。
+* 可変長引数ですべて文字列
+
+	@Command
+	def commandname(model, *args):
+
+		return
+
+* 非同期処理のコマンドも作る
+	コマンド実行時から実行終了までインジケータを出してタブを操作できなくする。
+	もしくは、非同期で実行した結果をあとから知らせる
+
+	@AsyncCommand
+	def commandname(model, *args):
+
+		return
+
+## 前回の失敗点
+* UIとモデルの連携がうまく行っていなかった
+	モデルにはUIがQtであることを意識させたくない。
+	モデルを変更すれば、自動でUIを更新するようにしたい。
+* Qtをインストールするのがめんどい
+	~~GTK+かwxWidgetを使う~~
+	Qtがシグナル、スレッドに対応しているっぽいのでやっぱりQtを使う。
+* 非同期処理の部分がうまく実装できなかった
+* lispを使ったけど逆にコマンドを実装するのに時間がかかるようになった。
+	やめる。純粋なpythonにする。
+
+## コーディング方針
+* とりあえずコマンドのクラスから作っていく。
+* UIはとりあえず今あるものを使っていく。
+* 非同期処理の実装は後回しにする。
+	Qtのシグナル、スロットがマルチスレッドに対応しているっぽい。
+
+# パッケージ
+## model
+* Window
+	tab:tabs.currentの省略形
+	pain:tabs.current.pains.currentの省略形
+	file:tabs.current.pains.current.files[cursor]の省略形
+	selects:tabs.current.pains.current.selectsの省略形
+	tabs:Tab n個
+	tabs.current:カレントタブ
+	tabs.new:タブの追加
+	tabs.close:タブの削除
+	tabs.next:次のタブをカレントタブにする
+	tabs.prev:前のタブをカレントタブにする
+* Tab
+	pains:Pain 2個
+	pains.current:カレントペイン
+* Pain
+	files:File n個
+	cursor:カーソルのインデックス
+	selects:選択しているファイル
+	cwd:カレントディレクトリ
+	cd:カレントディレクトリを移動
+	reflesh:filesを再取得する
+* File
+	file.path:フルパス
+	file[]:他の属性。文字列で指定
+
+## command
+* Dispatcher
+	入力されたコマンドとCommand関数をひもづける
+* Parser
+	コマンド文字列をパースする。多分shlexそのまま
+
+## keymap
+* KeyMap
+	キーとコマンド文字列のマップ。

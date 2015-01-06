@@ -1,74 +1,62 @@
-import lispy
-import logging
-import subprocess
+import shlex
 import platform
-from multiprocessing import Process
+import subprocess
+from logging import getLogger,StreamHandler,DEBUG, Formatter
 
-def AsyncCommand(func):
-    def wrapped(*args):
-        tmp = list(args)
-        tmp.append(view)
-        tmp.append(model)
-        p = Process(target=func, args=tmp)
-        view.cw.set_progress(True)
-        p.start()
-        p.join()
-        #view.cw.set_progress(False)
-    return wrapped
 
-def Command(func):
-    def wrapped(*args):
-        return func(*args)
-    lispy.global_env.update({func.__name__: wrapped})
-    return wrapped
+logger = getLogger(__name__)
 
-def Command_(func):
+def add_globals(self):
+    self.update({
+        'tes': lambda x: x,
+        })
+    return self
+
+global_env = add_globals({})
+
+def command(func):
     def wrapped(*args):
         return func(*args)
-    lispy.global_env.update({func.__name__.replace('_', '-'): wrapped})
+    global_env.update({func.__name__: wrapped})
     return wrapped
 
-def CommandName(*names):
-    def command_decorator(func):
-        def wrapped(*args):
-            return func(*args)
-        commands = {}
-        for n in names:
-            commands[n] = wrapped
-        lispy.global_env.update(commands)
-        return wrapped
-    return command_decorator
+@command
+def hoge(x):
+    return "thoge"
 
-try:
-    model
-except NameError:
-    model = None
+def dispatch(cmdstr, env=global_env):
+    """文字列からコマンドにdispatchする
+    結果はloggingnに出力する
+    """
+    args = shlex.split(cmdstr)
+    if len(args) < 1:
+        return
 
-try:
-    view
-except NameError:
-    view = None
+    # "!"から始まる場合はshellを呼び出す
+    if args[0].startswith('!'):
+        args[0] = args[0].lstrip('!')
+        ret = call_shell('.', args)
+        if ret[0] != 0:
+            logger.error(ret[2])
+        else:
+            logger.info(ret[1])
+        return
 
+    else:
+        if not args[0] in env:
+            logger.error("'" + args[0] + "' was not difined")
+            return
 
-def init(v, m):
-    global model, view
-    view, model = v, m
-    lispy.global_env.update({'view': view})
-    lispy.global_env.update({'model': model})
+        func = env[args[0]]
+        if len(args) < 2:
+            ret = func()
+        else:
+            ret = func(*args[1:])
+        logger.info(ret)
+        return
 
-def do_command(cmd):
-    logging.debug(cmd)
-    try:
-        val = lispy.eval(lispy.parse(cmd))
-        if val is not None:
-            logging.info(lispy.to_string(val))
-    except Exception as e:
-        logging.exception(e)
-    return True
-
-@Command_
-def sh_call(cwd, args):
-    # TODO 判定関数を共通化すること
+def call_shell(cwd, args):
+    """shellを呼び出す"""
     isshell = 'Windows' == platform.system()
     if isshell:
         encoding = 'shift_jis'
@@ -76,17 +64,14 @@ def sh_call(cwd, args):
         encoding = 'utf-8'
     with subprocess.Popen(args, cwd=cwd,
             stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=isshell) as proc:
-        rcd = proc.wait()
-        return [proc.stdout.read().decode(encoding=encoding), proc.stderr.read().decode(encoding=encoding)]
+        return [proc.wait(), proc.stdout.read().decode(encoding=encoding), proc.stderr.read().decode(encoding=encoding)]
 
-@Command_
-def sh_popen(cwd, args):
-    subprocess.Popen(args, cwd=cwd)
 
-# TODO 以下　lisp置き換え
+if __name__ == '__main__':
+    handler = StreamHandler()
+    handler.setLevel(DEBUG)
+    handler.setFormatter(Formatter('%(levelname)-8s %(filename)s#%(funcName)s(%(lineno)d) - %(message)s'))
 
-@Command_
-def set_filter(func):
-    model.currentTab().current.filter = func
-    model.currentTab().current.reload()
-
+    logger.setLevel(DEBUG)
+    logger.addHandler(handler)
+    dispatch("hoge 2")
